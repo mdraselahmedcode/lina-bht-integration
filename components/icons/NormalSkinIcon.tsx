@@ -6,9 +6,16 @@ type IconProps = SvgProps & {
   size?: number;
   color?: string;
   style?: StyleProp<ViewStyle>;
+  checkColor?: string;
 };
 
-export function NormalSkinIcon({ size = 24, color = '#000', style, ...props }: IconProps) {
+export function NormalSkinIcon({
+  size = 24,
+  color = '#000',
+  checkColor = '#C6A88C',
+  style,
+  ...props
+}: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} {...props}>
       <Path
@@ -17,7 +24,7 @@ export function NormalSkinIcon({ size = 24, color = '#000', style, ...props }: I
       />
       <Path
         d="M16.2247 6.87891L10.4681 13.8745L8.04935 11.5214L6.4541 13.252L10.6549 17.338L17.9959 8.41791L16.2247 6.87891Z"
-        fill={color}
+        fill={checkColor}
       />
     </Svg>
   );

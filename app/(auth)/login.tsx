@@ -16,6 +16,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { useScreenReady } from '@/hooks/useScreenReady';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
@@ -66,34 +68,20 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    showInfo('Password reset feature coming soon!');
+    // showInfo('Password reset feature coming soon!');
+    router.push('/(auth)/(forgot-password)/email');
   };
 
   // Show loading while screen is rendering
   if (isRendering) {
-    return (
-      <FormLayout>
-        <View className="flex-1 items-center justify-center px-container">
-          <ActivityIndicator size="large" color="#95B287" />
-        </View>
-      </FormLayout>
-    );
+    <LoadingScreen />;
   }
 
   // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
-        <View className="flex-1 items-center justify-center px-container">
-          <View className="items-center">
-            <Text className="mb-4 text-center font-outfit text-lg text-red-500">
-              ⚠️ {renderError}
-            </Text>
-            <TouchableOpacity onPress={handleRetry} className="rounded-xl bg-[#95B287] px-6 py-3">
-              <Text className="font-outfit text-white">Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
       </FormLayout>
     );
   }
@@ -117,6 +105,7 @@ export default function LoginScreen() {
             value={(getField('email')?.value as string) || ''}
             handler={(_, value) => updateField('email', value)}
             error={!!getField('email')?.error}
+            height={56}
           />
         </View>
 

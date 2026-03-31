@@ -21,6 +21,7 @@ interface InputFieldProps {
   numberOfLines?: number;
   secureTextEntry?: boolean;
   withShadow?: boolean;
+  height?: number;
   gradientColors?: readonly [string, string, ...string[]];
 }
 
@@ -41,6 +42,7 @@ export default function InputField({
   numberOfLines = 1,
   secureTextEntry = false,
   withShadow = true,
+  height = 56,
   gradientColors = ['#ede4d9', '#ede4d9', '#ede4d9'],
   // gradientColors = ['#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1'],
 }: InputFieldProps) {
@@ -92,6 +94,7 @@ export default function InputField({
         start={{ x: 0.14, y: 0 }}
         end={{ x: 0.85, y: 1 }}
         style={{
+          height: height,
           borderRadius: 100,
           borderTopWidth: 2,
           borderLeftWidth: 2,

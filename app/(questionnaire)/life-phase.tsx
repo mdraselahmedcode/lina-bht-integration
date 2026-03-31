@@ -10,6 +10,8 @@ import { useScreenReady } from '@/hooks/useScreenReady';
 import { CrossIcon, PeriodIcon, PostpartumIcon, PregnantIcon } from '@/components/icons';
 import { CheckInCircleIcon } from '@/components/icons/CheckInCircleIcon';
 import { PlusInCircleIcon } from '@/components/icons';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
 
 const CURRENT_PHASE = [
   {
@@ -49,7 +51,7 @@ export default function LifePhaseScreen() {
   const { showError } = useToast();
 
   // Use screen ready hook to prevent shadow spread
-  const { isRendering, isContentReady } = useScreenReady({
+  const { isRendering, renderError, isContentReady } = useScreenReady({
     dependencies: [],
     delay: 100,
     initialReady: false,
@@ -103,12 +105,20 @@ export default function LifePhaseScreen() {
   };
 
   // Show loading while screen is rendering
+  const handleRetry = () => {
+    router.replace('/(questionnaire)/budget');
+  };
+
+  // Show loading while screen is rendering
   if (isRendering) {
+    <LoadingScreen />;
+  }
+
+  // Show error if rendering failed
+  if (renderError) {
     return (
       <FormLayout>
-        <View className="flex-1 items-center justify-center px-container">
-          <ActivityIndicator size="large" color="#95B287" />
-        </View>
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
       </FormLayout>
     );
   }
@@ -129,11 +139,11 @@ export default function LifePhaseScreen() {
         </View>
 
         {/* Current Phase Section */}
-        <View className="mb-6">
+        <View className="mb-10">
           <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
             Current Phase
           </Text>
-          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
+          <Text className="font-outfit text-[14px] text-titleTextColor">
             What is your current phase?
           </Text>
           <View className="gap-3">

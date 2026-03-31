@@ -17,7 +17,7 @@ module.exports = {
 
       },
       spacing: {
-        container: 20
+        container: 16
       },
       fontFamily: {
         didot: ['GFSDidot-Regular'], // 400 Reular

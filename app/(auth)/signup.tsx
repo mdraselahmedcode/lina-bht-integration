@@ -16,6 +16,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { useScreenReady } from '@/hooks/useScreenReady';
+import ErrorScreen from '@/components/errors/ErrorScreen';
+import LoadingScreen from '@/components/loading/LoadingScreen';
 
 export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
@@ -82,29 +84,14 @@ export default function SignUpScreen() {
 
   // Show loading while screen is rendering
   if (isRendering) {
-    return (
-      <FormLayout>
-        <View className="flex-1 items-center justify-center px-container">
-          <ActivityIndicator size="large" color="#95B287" />
-        </View>
-      </FormLayout>
-    );
+    <LoadingScreen />;
   }
 
   // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
-        <View className="flex-1 items-center justify-center px-container">
-          <View className="items-center">
-            <Text className="mb-4 text-center font-outfit text-lg text-red-500">
-              ⚠️ {renderError}
-            </Text>
-            <TouchableOpacity onPress={handleRetry} className="rounded-xl bg-[#95B287] px-6 py-3">
-              <Text className="font-outfit text-white">Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
       </FormLayout>
     );
   }
@@ -112,7 +99,7 @@ export default function SignUpScreen() {
   return (
     <FormLayout>
       <View
-        className="px-container pb-[40px] "
+        className="px-container py-9"
         style={{
           opacity: isContentReady ? 1 : 0,
           transform: [{ translateY: isContentReady ? 0 : 10 }],
@@ -128,6 +115,7 @@ export default function SignUpScreen() {
             value={(getField('name')?.value as string) || ''}
             handler={(_, value) => updateField('name', value)}
             error={!!getField('name')?.error}
+            height={56}
           />
         </View>
 
@@ -140,6 +128,7 @@ export default function SignUpScreen() {
             value={(getField('email')?.value as string) || ''}
             handler={(_, value) => updateField('email', value)}
             error={!!getField('email')?.error}
+            height={56}
           />
         </View>
 
@@ -152,6 +141,7 @@ export default function SignUpScreen() {
             handler={(_, value) => updateField('password', value)}
             error={!!getField('password')?.error}
             keyboard="default"
+            height={56}
           />
         </View>
 
@@ -164,6 +154,7 @@ export default function SignUpScreen() {
             handler={(_, value) => updateField('confirmPassword', value)}
             error={!!getField('confirmPassword')?.error}
             keyboard="default"
+            height={56}
           />
         </View>
 

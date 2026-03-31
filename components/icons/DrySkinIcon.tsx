@@ -8,7 +8,7 @@ type IconProps = SvgProps & {
   style?: StyleProp<ViewStyle>;
 };
 
-export function CombinationSkinIcon({ size = 24, color = '#000', style, ...props }: IconProps) {
+export function DrySkinIcon({ size = 24, color = '#000', style, ...props }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style} {...props}>
       <Path

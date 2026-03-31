@@ -1,108 +1,3 @@
-// import React, { useState } from 'react';
-// import {
-//   Image,
-//   ImageBackgroundProps,
-//   KeyboardType,
-//   StyleSheetProperties,
-//   TextInput,
-//   TouchableOpacity,
-//   View,
-// } from 'react-native';
-
-// import InputLabel from '../texts/InputLabel';
-
-// import { EyeCloseIcon, EyeOpenIcon } from '../icons';
-
-// const PasswordInput = ({
-//   keyboard,
-//   style,
-//   inputStyle,
-//   placeHolder = 'Please enter',
-//   label = 'Enter your',
-//   error = false,
-//   handler,
-//   value,
-//   name,
-//   required = true,
-//   onBlur,
-// }: {
-//   keyboard: string;
-//   style?: StyleSheetProperties;
-//   inputStyle?: StyleSheetProperties;
-//   placeHolder?: string;
-//   label?: string;
-//   error?: boolean;
-//   handler?: (name: string, value: string) => void;
-//   value?: string;
-//   name?: string;
-//   required?: boolean;
-//   onBlur?: (value: string) => void;
-// }) => {
-//   const [focused, setFocused] = useState(false);
-//   const [show, setShow] = useState(true);
-//   return (
-//     <View
-//       style={{
-//         backgroundColor: 'transparent',
-//         position: 'relative',
-//         ...style,
-//       }}>
-//       <InputLabel
-//         style={{
-//           color: required ? (error ? 'red' : '#323135') : '#323135',
-//           marginBottom: 5,
-//         }}
-//         text={label}
-//       />
-//       <TextInput
-//         onFocus={() => setFocused(true)}
-//         onBlur={() => {
-//           setFocused(false); // ✅ blur handler
-//           onBlur?.(value + '');
-//         }}
-//         secureTextEntry={show}
-//         value={value}
-//         className=" bg-background relative border border-[#A7A5AF] "
-//         style={{
-//           color: '#323135',
-//           lineHeight: 22,
-//           padding: 16,
-//           paddingVertical: 14,
-//           borderRadius: 8,
-//           borderWidth: 1,
-//           borderColor: error
-//             ? 'red'
-//             : focused
-//               ? '#323135' // ✅ dark border when focused
-//               : '#A7A5AF', // default border
-//           ...inputStyle,
-//         }}
-//         placeholder={placeHolder}
-//         keyboardType={keyboard as KeyboardType}
-//         onChangeText={(text) => handler?.(name as string, text)}
-//       />
-
-//       <TouchableOpacity
-//         style={{
-//           position: 'absolute',
-//           right: 14,
-//           top: '50%', // move icon to 50% of parent height
-//           transform: [{ translateY: 0 }], // move it up by half of icon height (24/2)
-//         }}
-//         activeOpacity={0.7}
-//         onPress={() => setShow(!show)}>
-//         {show ? (
-//           <EyeCloseIcon size={24} color="#323135" />
-//         ) : (
-//           <EyeOpenIcon size={24} color="#323135" />
-//         )}
-//       </TouchableOpacity>
-//     </View>
-//   );
-// };
-
-// export default PasswordInput;
-
 import React, { useState } from 'react';
 import {
   KeyboardType,
@@ -134,6 +29,7 @@ interface PasswordInputProps {
   gradientColors?: readonly [string, string, ...string[]];
   iconColor?: string;
   iconSize?: number;
+  height?: number;
 }
 
 export default function PasswordInput({
@@ -153,20 +49,21 @@ export default function PasswordInput({
   gradientColors = ['#ede4d9', '#ede4d9', '#ede4d9'],
   iconColor = '#78531880',
   iconSize = 24,
+  height = 56,
 }: PasswordInputProps) {
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(true);
 
   // Get border colors based on state
   const getBorderColors = () => {
-    if (error) {
-      return {
-        top: 'rgba(255, 0, 0, 0.7)',
-        left: 'rgba(255, 0, 0, 0.6)',
-        right: 'rgba(255, 0, 0, 0.3)',
-        bottom: 'rgba(255, 0, 0, 0.3)',
-      };
-    }
+    // if (error) {
+    //   return {
+    //     top: 'rgba(255, 0, 0, 0.21)',
+    //     left: 'rgba(255, 0, 0, 0.21)',
+    //     right: 'rgba(255, 0, 0, 0.21)',
+    //     bottom: 'rgba(255, 0, 0, 0.21)',
+    //   };
+    // }
     if (focused) {
       return {
         top: 'rgba(255, 255, 255, 1)',
@@ -204,6 +101,7 @@ export default function PasswordInput({
           start={{ x: 0.14, y: 0 }}
           end={{ x: 0.85, y: 1 }}
           style={{
+            height: height,
             borderRadius: 100,
             borderTopWidth: 2,
             borderLeftWidth: 2,
