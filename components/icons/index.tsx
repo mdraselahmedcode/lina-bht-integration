@@ -46,3 +46,5 @@ export { BorderCircleIcon } from './BorderCircleIcon';
 export { DotWideIcon } from './DotWideIcon';
 
 export { FaceScanIcon } from './FaceScanIcon';
+
+export { CameraIcon } from './CameraIcon';

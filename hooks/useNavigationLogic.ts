@@ -21,6 +21,7 @@
 
 //     const inOnboardingGroup = segments[0] === '(onboarding)';
 //     const inAuthGroup = segments[0] === '(auth)';
+//     const inQuestionnaireGroup = segments[0] === '(questionnaire)'; // ✅ Add questionnaire check
 //     const inMainGroup = segments[0] === '(main)';
 
 //     const FORCE_ONBOARDING = false;
@@ -29,6 +30,11 @@
 //       if (!inOnboardingGroup) {
 //         router.replace('/(onboarding)');
 //       }
+//       return;
+//     }
+
+//     // ✅ If user is in questionnaire, let them complete it
+//     if (inQuestionnaireGroup) {
 //       return;
 //     }
 
@@ -46,9 +52,6 @@
 //     }
 //   }, [isAppReady, hasSeenOnboarding, isAuthenticated, segments, router]);
 // };
-
-
-
 
 // hooks/useNavigationLogic.ts
 import { useEffect } from 'react';
@@ -73,8 +76,9 @@ export const useNavigationLogic = ({
 
     const inOnboardingGroup = segments[0] === '(onboarding)';
     const inAuthGroup = segments[0] === '(auth)';
-    const inQuestionnaireGroup = segments[0] === '(questionnaire)'; // ✅ Add questionnaire check
+    const inQuestionnaireGroup = segments[0] === '(questionnaire)';
     const inMainGroup = segments[0] === '(main)';
+    const inFlowGroup = segments[0] === '(flow)'; // ✅ Add flow group check
 
     const FORCE_ONBOARDING = false;
 
@@ -85,12 +89,17 @@ export const useNavigationLogic = ({
       return;
     }
 
-    // ✅ If user is in questionnaire, let them complete it
+    // ✅ Allow navigation in flow group (camera, loading screens)
+    if (inFlowGroup) {
+      return;
+    }
+
+    // ✅ Allow navigation in questionnaire group
     if (inQuestionnaireGroup) {
       return;
     }
 
-    // Navigation rules
+    // Navigation rules for main app flow
     if (!hasSeenOnboarding && !inOnboardingGroup) {
       router.replace('/(onboarding)');
     } else if (hasSeenOnboarding && !isAuthenticated && !inAuthGroup) {

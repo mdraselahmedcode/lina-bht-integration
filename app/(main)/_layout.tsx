@@ -511,7 +511,7 @@ const MiddleTabButton = ({ focused, onPress }: any) => {
 const CustomTabBar = ({ state, navigation }: any) => {
   const insets = useSafeAreaInsets(); // 🔥 key fix
   const routes = state.routes;
-  const middleIndex = routes.findIndex((r: any) => r.name === 'diagnosis/index');
+  const middleIndex = routes.findIndex((r: any) => r.name === 'scans/index');
 
   const totalHeight = TAB_BAR_HEIGHT + insets.bottom;
 
@@ -585,7 +585,7 @@ export default function MainLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="routines/index" />
-      <Tabs.Screen name="diagnosis/index" />
+      <Tabs.Screen name="scans/index" />
       <Tabs.Screen name="progress/index" />
       <Tabs.Screen name="profile/index" />
     </Tabs>
