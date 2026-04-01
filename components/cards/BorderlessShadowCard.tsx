@@ -89,13 +89,16 @@ export default function BorderlessShadowCard({
         activeOpacity,
         disabled,
       })}
-      className={`bg-[#F0E6D8] px-[12px] py-[21px] ${className ?? ''}`}
+      className={`bg-[#F0E6D8] ${className ?? ''}`}
       style={[
         {
           borderTopLeftRadius: b_tl,
           borderTopRightRadius: b_tr,
           borderBottomLeftRadius: b_bl,
           borderBottomRightRadius: b_br,
+
+          paddingHorizontal: 12,
+          paddingVertical: 21, 
 
           // Shadow
           ...Platform.select({

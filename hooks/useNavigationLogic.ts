@@ -53,6 +53,7 @@
 //   }, [isAppReady, hasSeenOnboarding, isAuthenticated, segments, router]);
 // };
 
+
 // hooks/useNavigationLogic.ts
 import { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
@@ -79,6 +80,18 @@ export const useNavigationLogic = ({
     const inQuestionnaireGroup = segments[0] === '(questionnaire)';
     const inMainGroup = segments[0] === '(main)';
     const inFlowGroup = segments[0] === '(flow)'; // ✅ Add flow group check
+
+    // hooks/useNavigationLogic.ts
+    // Add these to your flow groups
+    const inFaceScanGroup = segments[0] === 'face-scan';
+    const inHairScanGroup = segments[0] === 'hair-scan';
+    const inProductScanGroup = segments[0] === 'product-scan';
+
+    // Allow navigation in all scan groups
+    if (inFaceScanGroup || inHairScanGroup || inProductScanGroup) {
+      return;
+    }
+
 
     const FORCE_ONBOARDING = false;
 

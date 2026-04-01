@@ -48,3 +48,6 @@ export { DotWideIcon } from './DotWideIcon';
 export { FaceScanIcon } from './FaceScanIcon';
 
 export { CameraIcon } from './CameraIcon';
+
+export { IInCircleIcon } from './IInCircleIcon';
+export { SignInCuttedCircleIcon } from './SignInCuttedCircleIcon';

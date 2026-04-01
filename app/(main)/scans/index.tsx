@@ -12,9 +12,29 @@ import { useRouter } from 'expo-router';
 const Scan = () => {
 
   const router = useRouter();
+  // const handleScanPress = (scanType: string) => {
+  //   router.push({
+  //     pathname: '/(flow)/scans/face-scan',
+  //     params: { scanType: scanType }
+  //   });
+  // };
+
   const handleScanPress = (scanType: string) => {
+    let path = '';
+    switch (scanType) {
+      case 'Face Scan':
+        path = '/(flow)/face-scan/camera-scan';
+        break;
+      case 'Hair & Scalp Scan':
+        path = '/(flow)/hair-scan/camera-scan';
+        break;
+      case 'Product Match':
+        path = '/(flow)/product-scan/camera-scan';
+        break;
+    }
+
     router.push({
-      pathname: '/(flow)/scans/camera-scan',
+      pathname: path,
       params: { scanType: scanType }
     });
   };
