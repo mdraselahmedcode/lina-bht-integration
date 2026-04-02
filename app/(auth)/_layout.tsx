@@ -31,12 +31,24 @@ export default function AuthLayout() {
           headerShown: false,
           animation: 'slide_from_right',
           contentStyle: {
-            backgroundColor: 'transparent', // IMPORTANT
+            backgroundColor: '#E8DDD0', // IMPORTANT
           },
         }}>
-        <Stack.Screen name="login" />
+        <Stack.Screen
+          name="login"
+          options={{
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#E8DDD0' },
+          }}
+        />
 
-        <Stack.Screen name="signup" />
+        <Stack.Screen
+          name="signup"
+          options={{
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#E8DDD0' },
+          }}
+        />
 
         <Stack.Screen
           name="(forgot-password)"

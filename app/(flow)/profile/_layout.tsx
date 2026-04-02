@@ -6,14 +6,18 @@ export default function FaceScanLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+
         contentStyle: {
-          backgroundColor: '#E8DDD0',
+          backgroundColor: '#E8DDD0', // Use your theme color here
         },
       }}>
-      <Stack.Screen name="camera-scan" />
-      <Stack.Screen name="analysis-complete" />
-      <Stack.Screen name="analysis-compatibility-check" />
+      <Stack.Screen name="AskingUpgradeToPremiumScreen" />
+      <Stack.Screen name="PremiumPlanScreen" />
       <Stack.Screen name="loading-screen" />
+
+      {/* 
+      <Stack.Screen name="analysis-complete" />
+      <Stack.Screen name="analysis-compatibility-check" /> */}
     </Stack>
   );
 }

@@ -62,3 +62,18 @@ export { DangerIcon } from './DangerIcon';
 export { FlameIcon } from './FlameIcon';
 
 export { MoonIcon } from './MoonIcon';
+
+export { DesignInFlameIcon } from './DesignInFlameIcon';
+export { WaveInHeartIcon } from './WaveInHeartIcon';
+export { ArrowRightHalfIcon } from './ArrowRightHalfIcon';
+export { LogOutIcon } from './LogOutIcon';
+
+export { LockIcon } from './LockIcon';
+
+export { SingleStarIcon } from './SingleStarIcon';
+export { SignInCircleWithFillIcon } from './SignInCircleWithFill';
+
+export { ZLikeIcon } from './ZLikeIcon';
+export { ProtectionIcon } from './ProtectionIcon';
+export { LoveIcon } from './LoveIcon';
+export { ThreeCurvedIcon } from './ThreeCurvedIcon';

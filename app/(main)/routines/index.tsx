@@ -13,6 +13,7 @@ import { RoutineStepCard } from '@/components/routines/RoutineStepCard';
 import { RoutineTabBar } from '@/components/routines/RoutineTabButton';
 import { AddRoutineBottomSheet } from '@/components/routines/AddRoutineBottomSheet';
 import { routineSteps, getInitialCompletedSteps } from '@/constants/routineData';
+import Toast from 'react-native-toast-message';
 
 type RoutineType = 'morning' | 'night' | 'weekly';
 
@@ -97,6 +98,32 @@ const Routines = () => {
     setCompletedSteps((prev) => ({ ...prev, [key]: isCompleted }));
   };
 
+  // const handleAddCustomStep = (data: {
+  //   productName: string;
+  //   instructions: string;
+  //   routineType: string;
+  // }) => {
+  //   const newStep = {
+  //     stepNumber:
+  //       (routineSteps[data.routineType as RoutineType]?.length || 0) +
+  //       (customSteps[data.routineType]?.length || 0) +
+  //       1,
+  //     title: data.productName,
+  //     description: data.instructions || 'No instructions provided',
+  //     isCustom: true,
+  //   };
+
+  //   setCustomSteps((prev) => ({
+  //     ...prev,
+  //     [data.routineType]: [...(prev[data.routineType] || []), newStep],
+  //   }));
+
+  //   Alert.alert(
+  //     'Success',
+  //     `"${data.productName}" has been added to your ${data.routineType} routine.`
+  //   );
+  // };
+
   const handleAddCustomStep = (data: {
     productName: string;
     instructions: string;
@@ -117,10 +144,17 @@ const Routines = () => {
       [data.routineType]: [...(prev[data.routineType] || []), newStep],
     }));
 
-    Alert.alert(
-      'Success',
-      `"${data.productName}" has been added to your ${data.routineType} routine.`
-    );
+    // Show success toast
+    Toast.show({
+      type: 'success',
+      text1: 'Success!',
+      text2: `"${data.productName}" has been added to your ${data.routineType} routine.`,
+      position: 'bottom',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 30,
+      bottomOffset: 40,
+    });
   };
 
   const currentSteps = [
@@ -266,6 +300,7 @@ const Routines = () => {
         visible={bottomSheetVisible}
         onClose={() => setBottomSheetVisible(false)}
         onAdd={handleAddCustomStep}
+        initialRoutineType={activeRoutine} // Pass the active routine
       />
     </SafeAreaView>
   );

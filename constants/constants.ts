@@ -5,7 +5,7 @@ export const LAYOUT = {
   screen: {
     paddingX: 16,
     scrollViewPaddingTop: 8,
-    scrollViewPaddingBottom: 90,
+    scrollViewPaddingBottom: 70,
     customHeaderHeight: 80,
   },
 };

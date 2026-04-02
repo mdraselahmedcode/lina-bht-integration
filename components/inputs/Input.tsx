@@ -52,10 +52,14 @@ export default function InputField({
   const getBorderColors = () => {
     if (error) {
       return {
-        top: 'rgba(255, 0, 0, 0.7)',
-        left: 'rgba(255, 0, 0, 0.6)',
-        right: 'rgba(255, 0, 0, 0.3)',
-        bottom: 'rgba(255, 0, 0, 0.3)',
+        // top: 'rgba(255, 0, 0, 0.7)',
+        // left: 'rgba(255, 0, 0, 0.6)',
+        // right: 'rgba(255, 0, 0, 0.3)',
+        // bottom: 'rgba(255, 0, 0, 0.3)',
+        top: 'rgba(255, 255, 255, 1)',
+        left: 'rgba(255, 255, 255, 1)',
+        right: 'rgba(255, 255, 255, 1)',
+        bottom: 'rgba(255, 255, 255, 1)',
       };
     }
     if (focused) {
@@ -95,7 +99,7 @@ export default function InputField({
         end={{ x: 0.85, y: 1 }}
         style={{
           height: height,
-          borderRadius: 100,
+          borderRadius: 9999,
           borderTopWidth: 2,
           borderLeftWidth: 2,
           borderRightWidth: 2,

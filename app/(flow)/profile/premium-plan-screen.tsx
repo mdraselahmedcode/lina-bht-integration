@@ -1,0 +1,235 @@
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import CustomHeader from '@/components/header/CustomHeader';
+import { LAYOUT } from '@/constants/constants';
+import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
+import PrimaryButton from '@/components/buttons/PrimaryButton';
+import { SignInCircleWithFillIcon, SingleStarIcon } from '@/components/icons';
+import PillowBadge from '@/components/buttons/PillowBadge';
+
+const PremiumPlanScreen = () => {
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const premiumFeatures = [
+    'Unlimited AI Skin & Scalp Scans',
+    'Full Ingredient Compatibility Analysis',
+    'Hormone Cycle Routine Adjustments',
+    '1-on-1 AI Skincare Coaching',
+    'Early access to new features',
+  ];
+
+  const handleStartTrial = async () => {
+    setIsLoading(true);
+
+    // Simulate API call / payment processing
+    setTimeout(() => {
+      setIsLoading(false);
+      router.push('/(flow)/profile/loading-screen');
+    }, 4000);
+  };
+
+  return (
+    <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+      <CustomHeader title="Waxi Premium" height={50} backButton />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: LAYOUT.screen.scrollViewPaddingBottom,
+          marginTop: LAYOUT.screen.scrollViewPaddingTop,
+          flexGrow: 1,
+        }}
+        className="flex-1">
+        <View className="flex-1 items-center justify-center px-container">
+          {/* Premium Icon with Gradient */}
+          <LinearGradient
+            colors={['#977857', '#B89474', '#7A5D3E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <SingleStarIcon size={32} fillColor="#361A0D" strokeColor="#FFFFFF" />
+          </LinearGradient>
+
+          {/* Title & Description */}
+          <Text className="mt-3 font-outfitMedium text-[20px]" style={{ color: '#2E2117' }}>
+            Elevate Your Routine
+          </Text>
+          <Text
+            className="mt-[6px] text-center font-outfit text-[12px]"
+            style={{ color: '#2E2117B2', maxWidth: '90%' }}>
+            Unlock advanced AI diagnostics, unlimited product scans, and personalized coaching.
+          </Text>
+
+          {/* Pricing Card */}
+          <BorderlessShadowCard
+            b_tl={24}
+            b_tr={24}
+            b_bl={24}
+            b_br={24}
+            style={{
+              width: '100%',
+              marginTop: 24,
+              paddingHorizontal: 24,
+              paddingVertical: 24,
+              position: 'relative',
+            }}>
+            {/* Most Popular Badge */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                backgroundColor: '#977857',
+                paddingHorizontal: 24,
+                paddingVertical: 4,
+                borderTopRightRadius: 24,
+                borderBottomLeftRadius: 12,
+              }}>
+              <Text className="font-primous text-[12px] capitalize text-white">MOST POPULAR</Text>
+            </View>
+
+            {/* Plan Tabs - Equal Distribution */}
+            <View className="mt-3 flex-row gap-4">
+              {/* Monthly Tab */}
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setSelectedPlan('monthly')}
+                style={{ flex: 1 }}>
+                {selectedPlan === 'monthly' ? (
+                  <BorderlessShadowCard
+                    b_tl={6}
+                    b_tr={6}
+                    b_bl={6}
+                    b_br={6}
+                    style={{
+                      paddingVertical: 6,
+                      alignItems: 'center',
+                    }}>
+                    <Text className="font-outfitMedium text-[14px]" style={{ color: '#7A8B6A' }}>
+                      Monthly
+                    </Text>
+                  </BorderlessShadowCard>
+                ) : (
+                  <View
+                    style={{
+                      paddingVertical: 6,
+                      alignItems: 'center',
+                      borderRadius: 6,
+                    }}>
+                    <Text className="font-outfitMedium text-[14px]" style={{ color: '#2E211780' }}>
+                      Monthly
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Yearly Tab */}
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setSelectedPlan('yearly')}
+                style={{ flex: 1 }}>
+                {selectedPlan === 'yearly' ? (
+                  <BorderlessShadowCard
+                    b_tl={6}
+                    b_tr={6}
+                    b_bl={6}
+                    b_br={6}
+                    style={{
+                      paddingVertical: 6,
+                      alignItems: 'center',
+                    }}>
+                    <View className="flex-row items-center justify-center gap-2">
+                      <Text className="font-outfitMedium text-[14px]" style={{ color: '#7A8B6A' }}>
+                        Yearly
+                      </Text>
+                      <PillowBadge
+                        title="Save 20%"
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                        }}
+                        textStyle={{
+                          color: '#361A0D',
+                          fontSize: 10,
+                        }}
+                      />
+                    </View>
+                  </BorderlessShadowCard>
+                ) : (
+                  <View
+                    style={{
+                      paddingVertical: 6,
+                      alignItems: 'center',
+                      borderRadius: 6,
+                    }}>
+                    <Text className="font-outfitMedium text-[14px]" style={{ color: '#2E211780' }}>
+                      Yearly
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Pricing Details */}
+            <View className="mt-6">
+              <Text className="font-didot text-[32px]" style={{ color: '#361A0D' }}>
+                {selectedPlan === 'monthly' ? '$9.99' : '$119.88'}
+                <Text className="font-primous text-[14px]" style={{ color: '#2E2117CC' }}>
+                  /{selectedPlan === 'monthly' ? 'month' : 'year'}
+                </Text>
+              </Text>
+              <Text className="mt-[6px] font-outfit text-[16px]" style={{ color: '#361A0DCC' }}>
+                {selectedPlan === 'monthly'
+                  ? 'Billed monthly'
+                  : 'Just $9.99/month, billed annually'}
+              </Text>
+            </View>
+
+            {/* Features List - Same for both plans */}
+            <View className="mt-6" style={{ gap: 16 }}>
+              {premiumFeatures.map((feature, index) => (
+                <View key={index} className="flex-row items-center gap-3">
+                  <SignInCircleWithFillIcon size={20} fillColor="#7A8B6A33" strokeColor="#7A8B6A" />
+                  <Text className="flex-1 font-outfit text-[12px]" style={{ color: '#361A0DA3' }}>
+                    {feature}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {/* CTA Button with Loading State */}
+            <PrimaryButton
+              title="Start 7-Day Free Trial"
+              onPress={handleStartTrial}
+              isLoading={isLoading}
+              loaderColor="#361A0D"
+              style={{ marginTop: 32, width: '100%' }}
+            />
+
+            {/* Footer Text */}
+            <Text
+              className="mt-4 text-center font-outfit text-[10px]"
+              style={{ color: '#2E211799' }}>
+              Cancel anytime • No commitment • Auto-renewable
+            </Text>
+          </BorderlessShadowCard>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default PremiumPlanScreen;
+
+const styles = StyleSheet.create({});

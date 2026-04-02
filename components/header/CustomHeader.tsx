@@ -169,6 +169,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           {backButton && (
             <TouchableOpacity
+              activeOpacity={1}
               onPress={() => router.back()}
               style={{ marginRight: 16 }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -198,8 +199,8 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
           <Text
             numberOfLines={1}
-            className="flex-1 text-start font-outfitMedium text-[#2A2118]"
-            style={{ fontSize: 24 }}>
+            className="flex-1 text-start font-outfitMedium "
+            style={{ fontSize: 24, color: '#2A2118' }}>
             {title}
           </Text>
         </View>

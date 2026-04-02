@@ -49,7 +49,7 @@ export default function PrimaryButton({
   const ButtonContent = (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.8}
+      activeOpacity={0.9}
       disabled={isButtonDisabled}
       className={`rounded-[100px] ${isButtonDisabled ? 'opacity-50' : ''}`}
       style={{
