@@ -120,7 +120,9 @@ const Profile = () => {
 
               {/* AI Assistant */}
               <BorderlessShadowCard
-                onPress={() => {}}
+                onPress={() => {
+                  router.push('/(flow)/ai-assistant');
+                }}
                 b_tl={24}
                 b_tr={24}
                 b_bl={0}

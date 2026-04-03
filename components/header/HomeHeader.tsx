@@ -105,6 +105,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
 
         {/* 🔔 Notification Bell */}
         <TouchableOpacity
+          activeOpacity={0.9}
           // onPress={() => router.push('/notifications')}
           onPress={() => {}}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>

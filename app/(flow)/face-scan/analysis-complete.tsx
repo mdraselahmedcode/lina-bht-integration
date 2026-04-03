@@ -10,8 +10,11 @@ import CircularProgress from '@/components/home/CircularProgress';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
 import PillowBadge from '@/components/buttons/PillowBadge';
 import { SignInCuttedCircleIcon } from '@/components/icons';
+import { useRouter } from 'expo-router';
 
 const AiAnalysisCompleteScreen = () => {
+  const router = useRouter();
+
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader title="Analysis Complete" height={50} backButton />
@@ -133,7 +136,9 @@ const AiAnalysisCompleteScreen = () => {
             {/* Button */}
             <PrimaryButton
               title="View Recommended Routine"
-              onPress={() => {}}
+              onPress={() => {
+                router.push('/(main)/routines');
+              }}
               style={{ marginBottom: 20 }}
             />
           </View>

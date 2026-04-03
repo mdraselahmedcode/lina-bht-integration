@@ -77,3 +77,6 @@ export { ZLikeIcon } from './ZLikeIcon';
 export { ProtectionIcon } from './ProtectionIcon';
 export { LoveIcon } from './LoveIcon';
 export { ThreeCurvedIcon } from './ThreeCurvedIcon';
+
+export { ThreeStarsIcon } from './ThreeStarsIcon';
+export { SendButtonIcon } from './SendButton';

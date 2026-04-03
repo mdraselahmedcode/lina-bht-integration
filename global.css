@@ -2,14 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
-
 /* Custom global styles */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  background-color: '#E8DDD0';
 }
 
 /* Hide scrollbar for cleaner look */
