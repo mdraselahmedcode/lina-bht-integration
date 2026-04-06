@@ -4,7 +4,10 @@
     "slug": "gixy",
     "version": "1.0.0",
     "scheme": "gixy",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -20,7 +23,8 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to analyze your skin and hair health.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -34,7 +38,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -47,7 +53,9 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.sheikhrussell123.gixy",
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "extra": {
       "router": {},

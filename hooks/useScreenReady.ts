@@ -10,18 +10,26 @@
 // interface UseScreenReadyProps {
 //   dependencies?: any[];
 //   delay?: number;
+//   initialReady?: boolean; // New prop to control initial state
 // }
 
-// export const useScreenReady = ({ dependencies = [], delay = 100 }: UseScreenReadyProps = {}) => {
-//   const [isRendering, setIsRendering] = useState(true);
+// export const useScreenReady = ({
+//   dependencies = [],
+//   delay = 100,
+//   initialReady = false, // Default to false, but can be overridden
+// }: UseScreenReadyProps = {}) => {
+//   const [isRendering, setIsRendering] = useState(!initialReady);
 //   const [renderError, setRenderError] = useState<string | null>(null);
-//   const [isContentReady, setIsContentReady] = useState(false);
+//   const [isContentReady, setIsContentReady] = useState(initialReady);
 
 //   useEffect(() => {
+//     // If already ready, don't do anything
+//     if (initialReady) return;
+
 //     const timer = setTimeout(() => {
 //       try {
-//         const allDepsReady = dependencies.every(dep => dep !== undefined && dep !== null);
-        
+//         const allDepsReady = dependencies.every((dep) => dep !== undefined && dep !== null);
+
 //         if (allDepsReady) {
 //           setIsRendering(false);
 //           setTimeout(() => {
@@ -39,7 +47,7 @@
 //     }, delay);
 
 //     return () => clearTimeout(timer);
-//   }, [...dependencies, delay]);
+//   }, [...dependencies, delay, initialReady]);
 
 //   return {
 //     isRendering,
@@ -51,12 +59,10 @@
 //   };
 // };
 
-
-// hooks/useScreenReady.ts
+// hooks/useScreenReady.ts (Updated to allow immediate ready)
 import { useState, useEffect } from 'react';
 import { LayoutAnimation, Platform, UIManager } from 'react-native';
 
-// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -64,26 +70,31 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 interface UseScreenReadyProps {
   dependencies?: any[];
   delay?: number;
-  initialReady?: boolean; // New prop to control initial state
+  initialReady?: boolean;
+  immediate?: boolean; // New prop to skip delay
 }
 
-export const useScreenReady = ({ 
-  dependencies = [], 
+export const useScreenReady = ({
+  dependencies = [],
   delay = 100,
-  initialReady = false // Default to false, but can be overridden
+  initialReady = false,
+  immediate = false, // If true, content is ready immediately
 }: UseScreenReadyProps = {}) => {
   const [isRendering, setIsRendering] = useState(!initialReady);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isContentReady, setIsContentReady] = useState(initialReady);
 
   useEffect(() => {
-    // If already ready, don't do anything
-    if (initialReady) return;
+    if (initialReady || immediate) {
+      setIsRendering(false);
+      setIsContentReady(true);
+      return;
+    }
 
     const timer = setTimeout(() => {
       try {
-        const allDepsReady = dependencies.every(dep => dep !== undefined && dep !== null);
-        
+        const allDepsReady = dependencies.every((dep) => dep !== undefined && dep !== null);
+
         if (allDepsReady) {
           setIsRendering(false);
           setTimeout(() => {
@@ -101,7 +112,7 @@ export const useScreenReady = ({
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [...dependencies, delay, initialReady]);
+  }, [...dependencies, delay, initialReady, immediate]);
 
   return {
     isRendering,

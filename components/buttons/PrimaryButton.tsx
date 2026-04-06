@@ -42,6 +42,8 @@ export default function PrimaryButton({
   height = 64,
   style,
   gradientColors = ['#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1'],
+  // gradientColors = ['#F0E6D8', '#F0E6D8', '#F0E6D8'],
+
   withShadow = true,
 }: ButtonProps) {
   const isButtonDisabled = disabled || isLoading;

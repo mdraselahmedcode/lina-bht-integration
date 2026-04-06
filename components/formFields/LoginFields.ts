@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { FieldsType, FieldType, KeyboardType } from '@/types/Types';
 
-
 const LoginFields = () => {
   const [fields, setFields] = useState<FieldsType[]>([
     {

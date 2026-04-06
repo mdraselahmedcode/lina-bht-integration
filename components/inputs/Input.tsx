@@ -1,3 +1,4 @@
+// components/inputs/Input.tsx
 import React, { useState } from 'react';
 import { KeyboardType, TextInput, TextStyle, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +24,13 @@ interface InputFieldProps {
   withShadow?: boolean;
   height?: number;
   gradientColors?: readonly [string, string, ...string[]];
+
+  // Border radius customization (optional - won't affect existing usage)
+  borderRadius?: number;
+  borderTopLeftRadius?: number;
+  borderTopRightRadius?: number;
+  borderBottomLeftRadius?: number;
+  borderBottomRightRadius?: number;
 }
 
 export default function InputField({
@@ -44,18 +52,40 @@ export default function InputField({
   withShadow = true,
   height = 56,
   gradientColors = ['#ede4d9', '#ede4d9', '#ede4d9'],
-  // gradientColors = ['#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1'],
+  borderRadius, // New - optional
+  borderTopLeftRadius, // New - optional
+  borderTopRightRadius, // New - optional
+  borderBottomLeftRadius, // New - optional
+  borderBottomRightRadius, // New - optional
 }: InputFieldProps) {
   const [focused, setFocused] = useState(false);
+
+  // Calculate final border radius values (maintain backward compatibility)
+  const getBorderRadius = () => {
+    if (borderRadius !== undefined) {
+      // If new borderRadius is provided, use it for all corners
+      return {
+        topLeft: borderRadius,
+        topRight: borderRadius,
+        bottomLeft: borderRadius,
+        bottomRight: borderRadius,
+      };
+    }
+    // Default to 100 (rounded) for backward compatibility
+    return {
+      topLeft: borderTopLeftRadius ?? 100,
+      topRight: borderTopRightRadius ?? 100,
+      bottomLeft: borderBottomLeftRadius ?? 100,
+      bottomRight: borderBottomRightRadius ?? 100,
+    };
+  };
+
+  const radius = getBorderRadius();
 
   // Get border colors based on state
   const getBorderColors = () => {
     if (error) {
       return {
-        // top: 'rgba(255, 0, 0, 0.7)',
-        // left: 'rgba(255, 0, 0, 0.6)',
-        // right: 'rgba(255, 0, 0, 0.3)',
-        // bottom: 'rgba(255, 0, 0, 0.3)',
         top: 'rgba(255, 255, 255, 1)',
         left: 'rgba(255, 255, 255, 1)',
         right: 'rgba(255, 255, 255, 1)',
@@ -99,7 +129,10 @@ export default function InputField({
         end={{ x: 0.85, y: 1 }}
         style={{
           height: height,
-          borderRadius: 9999,
+          borderTopLeftRadius: radius.topLeft,
+          borderTopRightRadius: radius.topRight,
+          borderBottomLeftRadius: radius.bottomLeft,
+          borderBottomRightRadius: radius.bottomRight,
           borderTopWidth: 2,
           borderLeftWidth: 2,
           borderRightWidth: 2,
@@ -121,7 +154,7 @@ export default function InputField({
             fontSize: 16,
             paddingHorizontal: 24,
             paddingVertical: multiline ? 14 : 14,
-            borderRadius: 100,
+            borderRadius: radius.topLeft, // Match the input's internal border radius
             minHeight: multiline ? 100 : 56,
             textAlignVertical: multiline ? 'top' : 'center',
             fontFamily: 'Outfit-Regular',
@@ -153,7 +186,12 @@ export default function InputField({
         endColor="rgba(0, 0, 0, 0)"
         offset={[2, 4]}
         containerStyle={{ width: '100%' }}
-        style={{ borderRadius: 100 }}>
+        style={{
+          borderTopLeftRadius: radius.topLeft,
+          borderTopRightRadius: radius.topRight,
+          borderBottomLeftRadius: radius.bottomLeft,
+          borderBottomRightRadius: radius.bottomRight,
+        }}>
         <Shadow
           stretch
           distance={5}
@@ -161,7 +199,12 @@ export default function InputField({
           endColor="rgba(0, 0, 0, 0)"
           offset={[1.8, 3.2]}
           containerStyle={{ width: '100%' }}
-          style={{ borderRadius: 100 }}>
+          style={{
+            borderTopLeftRadius: radius.topLeft,
+            borderTopRightRadius: radius.topRight,
+            borderBottomLeftRadius: radius.bottomLeft,
+            borderBottomRightRadius: radius.bottomRight,
+          }}>
           <Shadow
             stretch
             distance={2.5}
@@ -169,7 +212,12 @@ export default function InputField({
             endColor="rgba(0, 0, 0, 0)"
             offset={[1.2, 2.2]}
             containerStyle={{ width: '100%' }}
-            style={{ borderRadius: 100 }}>
+            style={{
+              borderTopLeftRadius: radius.topLeft,
+              borderTopRightRadius: radius.topRight,
+              borderBottomLeftRadius: radius.bottomLeft,
+              borderBottomRightRadius: radius.bottomRight,
+            }}>
             <Shadow
               stretch
               distance={1}
@@ -177,7 +225,12 @@ export default function InputField({
               endColor="rgba(0, 0, 0, 0)"
               offset={[0.8, 1.5]}
               containerStyle={{ width: '100%' }}
-              style={{ borderRadius: 100 }}>
+              style={{
+                borderTopLeftRadius: radius.topLeft,
+                borderTopRightRadius: radius.topRight,
+                borderBottomLeftRadius: radius.bottomLeft,
+                borderBottomRightRadius: radius.bottomRight,
+              }}>
               {InputContent}
             </Shadow>
           </Shadow>

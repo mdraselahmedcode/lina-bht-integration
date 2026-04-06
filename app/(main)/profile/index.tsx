@@ -1,5 +1,5 @@
 /* eslint-disable import/no-unresolved */
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '@/components/header/CustomHeader';
@@ -11,12 +11,15 @@ import { Avatar } from '@/components/ui/Avatar';
 import {
   ArrowRightHalfIcon,
   DesignInFlameIcon,
+  GearIcon,
   LogOutIcon,
+  SupportIcon,
   WaveInHeartIcon,
 } from '@/components/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useRouter } from 'expo-router';
+import { CircularIconButton } from '@/components/buttons/CircularIconButton';
 
 const Profile = () => {
   const router = useRouter();
@@ -35,7 +38,20 @@ const Profile = () => {
 
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-      <CustomHeader title="Profile" height={50} backButton={false} />
+      <CustomHeader
+        title="Profile"
+        height={50}
+        backButton={true}
+        rightIcon={
+          <CircularIconButton
+            size={40}
+            icon={<GearIcon size={20} color="#361A0D" />}
+            onPress={() => {
+              router.push('/(flow)/settings/');
+            }}
+          />
+        }
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -134,11 +150,17 @@ const Profile = () => {
                 }}>
                 <View className="flex-row items-center">
                   <View className="flex-1 flex-row items-center gap-3">
-                    <DesignInFlameIcon size={24} color="#361A0D" />
+                    <Image
+                      source={require('@/assets/images/ai_floating_logo.png')}
+                      style={{ width: 16, height: 19 }}
+                      resizeMode="contain"
+                    />
+
                     <Text className="font-outfit text-[14px]" style={{ color: '#361A0D' }}>
                       AI Assistant
                     </Text>
                   </View>
+
                   <ArrowRightHalfIcon size={16} color="#361A0D" />
                 </View>
               </BorderlessShadowCard>
@@ -206,7 +228,32 @@ const Profile = () => {
             <Text className="mt-3 font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
               Legal & Support
             </Text>
+            {/* support */}
+            <BorderlessShadowCard
+              onPress={() => {
+                router.push('/(flow)/support/');
+              }}
+              b_tl={24}
+              b_tr={24}
+              b_bl={0}
+              b_br={0}
+              style={{
+                paddingVertical: 16,
+                paddingHorizontal: 24,
+                marginTop: 8,
+              }}>
+              <View className="flex-row items-center">
+                <View className="flex-1 flex-row items-center gap-3">
+                  <SupportIcon size={20} color="#361A0D" />
+                  <Text className="font-outfit text-[14px]" style={{ color: '#361A0D' }}>
+                    Support
+                  </Text>
+                </View>
+                <ArrowRightHalfIcon size={16} color="#361A0D" />
+              </View>
+            </BorderlessShadowCard>
 
+            {/* privacy and terms */}
             <BorderlessShadowCard
               onPress={() => {
                 router.push('/(flow)/privacy-and-terms');

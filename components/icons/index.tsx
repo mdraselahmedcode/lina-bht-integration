@@ -81,3 +81,6 @@ export { ThreeCurvedIcon } from './ThreeCurvedIcon';
 export { ThreeStarsIcon } from './ThreeStarsIcon';
 export { SendButtonIcon } from './SendButton';
 export { CurvedArrowTopRightIcon } from './CurvedArrowTopRight';
+
+export { SupportIcon } from './SupportIcon';
+export { GearIcon } from './GearIcon';
