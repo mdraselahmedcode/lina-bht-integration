@@ -1,6 +1,14 @@
 // app/(onboarding)/screen3.tsx
 import React, { useState, useEffect } from 'react';
-import { View, ImageBackground, LayoutAnimation, Platform, UIManager } from 'react-native';
+import {
+  View,
+  ImageBackground,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +18,7 @@ import { ArrowRightIcon } from '@/components/icons';
 import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
 import OnboardingCard from '@/components/onboarding/OnboardingCard';
 import { ONBOARDING_DATA } from '@/constants/onboarding';
-
+const { height } = Dimensions.get('window');
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -63,13 +71,13 @@ export default function OnboardingScreen3() {
         }}>
         <ImageBackground
           source={data.backgroundImage}
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            zIndex: 0,
-          }}
-          resizeMode="cover"
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              height: height - 300,
+            },
+          ]}
+          resizeMode="stretch"
         />
 
         <OnboardingHeader showBack={true} onBack={handleBack} onSkip={handleSkip} />

@@ -1,6 +1,14 @@
 // app/(onboarding)/screen1.tsx
 import React, { useState, useEffect } from 'react';
-import { View, ImageBackground, LayoutAnimation, Platform, UIManager } from 'react-native';
+import {
+  View,
+  ImageBackground,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+  Dimensions,
+  StyleSheet,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +18,7 @@ import { ArrowRightIcon } from '@/components/icons';
 import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
 import OnboardingCard from '@/components/onboarding/OnboardingCard';
 import { ONBOARDING_DATA } from '@/constants/onboarding';
+const { height } = Dimensions.get('window');
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -61,15 +70,14 @@ export default function OnboardingScreen1() {
         {/* Background Image */}
         <ImageBackground
           source={data.backgroundImage}
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            zIndex: 0,
-          }}
-          resizeMode="cover"
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              height: height - 300,
+            },
+          ]}
+          resizeMode="stretch"
         />
-
         {/* Header */}
         <OnboardingHeader showBack={false} onSkip={handleSkip} />
 

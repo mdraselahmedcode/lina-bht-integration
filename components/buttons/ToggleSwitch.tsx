@@ -1,5 +1,5 @@
 // // components/buttons/ToggleSwitch.tsx
-// import React from 'react';
+// import React, { useEffect } from 'react';
 // import { TouchableOpacity, View } from 'react-native';
 // import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
 
@@ -22,9 +22,13 @@
 // }) => {
 //   const translateX = useSharedValue(value ? size.width - circleSize - 4 : 4);
 
+//   // Update the position when value prop changes from parent
+//   useEffect(() => {
+//     translateX.value = withSpring(value ? size.width - circleSize - 4 : 4);
+//   }, [value, size.width, circleSize, translateX]);
+
 //   const handlePress = () => {
 //     const newValue = !value;
-//     translateX.value = withSpring(newValue ? size.width - circleSize - 4 : 4);
 //     onValueChange(newValue);
 //   };
 

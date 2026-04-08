@@ -11,7 +11,7 @@ export enum FieldType {
   GRIDINPUT = 'gridinput',
   LOCATION = 'location',
   BOOLEAN = 'BOOLEAN',
-  ARRAY = "ARRAY",
+  ARRAY = 'ARRAY',
 }
 
 export enum KeyboardType {

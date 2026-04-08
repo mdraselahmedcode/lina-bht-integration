@@ -76,12 +76,12 @@ export default function RootLayout() {
         <Toast config={toastConfig} />
 
         {/* Dev Menu Trigger - Only in development mode */}
-        {/* {__DEV__ && (
+        {__DEV__ && (
           <>
             <FloatingDevButton onPress={() => setDevMenuVisible(true)} />
             <DevMenu visible={devMenuVisible} onClose={() => setDevMenuVisible(false)} />
           </>
-        )} */}
+        )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -4,6 +4,7 @@
 // import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
 // import { ToggleSwitch } from '@/components/buttons/ToggleSwitch';
 
+// // components/routines/RoutineStepCard.tsx (add isCustom prop)
 // interface RoutineStepCardProps {
 //   stepNumber: number;
 //   title: string;
@@ -12,9 +13,10 @@
 //   onToggle: (completed: boolean) => void;
 //   isLast?: boolean;
 //   isFirst?: boolean;
-//   style?: StyleProp<ViewStyle>; // Style for the parent container
-//   className?: string; // Optional className for Tailwind
-//   contentContainerStyle?: StyleProp<ViewStyle>; // Style for the inner BorderlessShadowCard
+//   isCustom?: boolean; // Add this
+//   style?: StyleProp<ViewStyle>;
+//   className?: string;
+//   contentContainerStyle?: StyleProp<ViewStyle>;
 // }
 
 // export const RoutineStepCard: React.FC<RoutineStepCardProps> = ({
@@ -25,6 +27,7 @@
 //   onToggle,
 //   isLast = false,
 //   isFirst = false,
+//   isCustom = false,
 //   style,
 //   className = '',
 //   contentContainerStyle,
@@ -51,9 +54,18 @@
 //           contentContainerStyle,
 //         ]}>
 //         <View className="flex-row items-center justify-between">
-//           <Text className="font-outfitBold text-[14px]" style={{ color: '#977857' }}>
-//             Step {stepNumber}
-//           </Text>
+//           <View className="flex-row items-center gap-2">
+//             <Text className="font-outfitBold text-[14px]" style={{ color: '#977857' }}>
+//               Step {stepNumber}
+//             </Text>
+//             {isCustom && (
+//               <View className="rounded-full bg-[#7A8B6A20] px-2 py-0.5">
+//                 <Text className="font-outfit text-[10px]" style={{ color: '#7A8B6A' }}>
+//                   Custom
+//                 </Text>
+//               </View>
+//             )}
+//           </View>
 //           <ToggleSwitch value={isCompleted} onValueChange={onToggle} />
 //         </View>
 //         <Text className="mt-3 font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
@@ -71,9 +83,8 @@
 import React from 'react';
 import { View, Text, StyleProp, ViewStyle } from 'react-native';
 import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
-import { ToggleSwitch } from '@/components/buttons/ToggleSwitch';
+import { RadioButton } from '@/components/buttons/RadioButton';
 
-// components/routines/RoutineStepCard.tsx (add isCustom prop)
 interface RoutineStepCardProps {
   stepNumber: number;
   title: string;
@@ -82,7 +93,7 @@ interface RoutineStepCardProps {
   onToggle: (completed: boolean) => void;
   isLast?: boolean;
   isFirst?: boolean;
-  isCustom?: boolean; // Add this
+  isCustom?: boolean;
   style?: StyleProp<ViewStyle>;
   className?: string;
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -135,7 +146,7 @@ export const RoutineStepCard: React.FC<RoutineStepCardProps> = ({
               </View>
             )}
           </View>
-          <ToggleSwitch value={isCompleted} onValueChange={onToggle} />
+          <RadioButton value={isCompleted} onValueChange={onToggle} />
         </View>
         <Text className="mt-3 font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
           {title}

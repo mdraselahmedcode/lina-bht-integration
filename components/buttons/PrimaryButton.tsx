@@ -41,7 +41,7 @@ export default function PrimaryButton({
   loaderColor = '#FFFFFF',
   height = 64,
   style,
-  gradientColors = ['#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1', '#e2d2c1'],
+  gradientColors = ['#e2d2c1', '#e2d2c1'],
   // gradientColors = ['#F0E6D8', '#F0E6D8', '#F0E6D8'],
 
   withShadow = true,
