@@ -1,5 +1,5 @@
 // app/(flow)/notification/index.tsx
-import { ScrollView, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { ScrollView, StyleSheet, RefreshControl, Alert, View } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TouchableOpacity, Text } from 'react-native';
@@ -13,15 +13,31 @@ import { NotificationList } from '@/components/notifications/NotificationList';
 import { EmptyState } from '@/components/notifications/EmptyState';
 import { SAMPLE_NOTIFICATIONS } from '@/constants/sampleNotifications';
 import { Notification } from '@/types/notification';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
 
 export default function NotificationScreen() {
   const router = useRouter();
   const { showSuccess } = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(SAMPLE_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [dangerCount, setDangerCount] = useState(0);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
+  // Screen ready state for smooth transitions
+  const { isRendering, isContentReady, renderError } = useScreenReady({
+    dependencies: [],
+    delay: 100,
+    initialReady: false,
+  });
+
+  useEffect(() => {
+    // Simulate loading notifications from API
+    loadNotifications();
+  }, []);
 
   useEffect(() => {
     const count = notifications.filter((n) => !n.read).length;
@@ -30,12 +46,24 @@ export default function NotificationScreen() {
     setDangerCount(danger);
   }, [notifications]);
 
+  const loadNotifications = async () => {
+    setIsDataLoading(true);
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setNotifications(SAMPLE_NOTIFICATIONS);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-      showSuccess('Notifications refreshed');
-    }, 1500);
+    await loadNotifications();
+    setRefreshing(false);
+    showSuccess('Notifications refreshed');
   };
 
   const markAsRead = (id: string) => {
@@ -99,6 +127,38 @@ export default function NotificationScreen() {
     }
   };
 
+  const handleRetry = () => {
+    loadNotifications();
+  };
+
+  // Show initial render loading (useScreenReady) - wrapped in SafeAreaView
+  if (isRendering) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Preparing notifications..." />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if rendering failed
+  if (renderError) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Notifications" height={50} backButton={true} />
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
+      </SafeAreaView>
+    );
+  }
+
+  // Show data loading state
+  if (isDataLoading) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Loading your notifications..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader
@@ -127,27 +187,33 @@ export default function NotificationScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7A8B6A']} />
         }>
-        {notifications.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <>
-            <DangerBanner count={dangerCount} />
-            <NotificationList
-              notifications={notifications}
-              unreadCount={unreadCount}
-              onNotificationPress={handleNotificationPress}
-              onDelete={deleteNotification}
-            />
-            {/* Clear All Button */}
-            <TouchableOpacity
-              onPress={clearAllNotifications}
-              className="mb-8 mt-4 items-center justify-center py-3">
-              <Text className="font-outfitMedium text-[14px]" style={{ color: '#2E211780' }}>
-                Clear All Notifications
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <View
+          style={{
+            opacity: isContentReady ? 1 : 0,
+            transform: [{ translateY: isContentReady ? 0 : 10 }],
+          }}>
+          {notifications.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <>
+              <DangerBanner count={dangerCount} />
+              <NotificationList
+                notifications={notifications}
+                unreadCount={unreadCount}
+                onNotificationPress={handleNotificationPress}
+                onDelete={deleteNotification}
+              />
+              {/* Clear All Button */}
+              <TouchableOpacity
+                onPress={clearAllNotifications}
+                className="mb-8 mt-4 items-center justify-center py-3">
+                <Text className="font-outfitMedium text-[14px]" style={{ color: '#2E211780' }}>
+                  Clear All Notifications
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {/* Confirmation Modal */}

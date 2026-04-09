@@ -1,25 +1,18 @@
-// import { Stack, Link } from 'expo-router';
+// app/index.tsx
+import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
 
-// import { View } from 'react-native';
+export default function RootIndex() {
+  const router = useRouter();
 
-// import { Button } from '@/components/Button';
-// import { Container } from '@/components/Container';
-// import { ScreenContent } from '@/components/ScreenContent';
+  useEffect(() => {
+    // Small delay to ensure navigation is ready
+    const timer = setTimeout(() => {
+      router.replace('/(main)');
+    }, 100);
 
-// export default function Home() {
-//   return (
-//     <View className={styles.container}>
-//       <Stack.Screen options={{ title: 'Home' }} />
-//       <Container>
-//         <ScreenContent path="app/index.tsx" title="Home"></ScreenContent>
-//         <Link href={{ pathname: '/details', params: { name: 'Dan' } }} asChild>
-//           <Button title="Show Details" />
-//         </Link>
-//       </Container>
-//     </View>
-//   );
-// }
+    return () => clearTimeout(timer);
+  }, []);
 
-// const styles = {
-//   container: 'flex flex-1 bg-white',
-// };
+  return null;
+}

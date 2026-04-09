@@ -13,14 +13,16 @@ import {
 } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomHeader from '@/components/header/CustomHeader';
 import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
 import { SendButtonIcon } from '@/components/icons';
-import { CircularIconButton } from '@/components/buttons/CircularIconButton';
 import { useToast } from '@/hooks/useToast';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import ErrorScreen from '@/components/errors/ErrorScreen';
+import { useRouter } from 'expo-router';
 
 interface Message {
   id: string;
@@ -30,6 +32,7 @@ interface Message {
 }
 
 const AiAssistantScreen = () => {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -38,6 +41,13 @@ const AiAssistantScreen = () => {
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const { showError } = useToast();
+
+  // Screen ready state for smooth transitions
+  const { isRendering, isContentReady, renderError } = useScreenReady({
+    dependencies: [],
+    delay: 100,
+    initialReady: false,
+  });
 
   // Load messages on mount
   useEffect(() => {
@@ -191,19 +201,31 @@ const AiAssistantScreen = () => {
     </View>
   );
 
-  if (isLoading) {
+  const handleRetry = () => {
+    router.replace('/(flow)/ai-assistant');
+  };
+
+  // Show initial render loading (useScreenReady)
+  if (isRendering) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-        <CustomHeader title="AI Assistant" height={50} backButton={true} />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#95B287" />
-        </View>
+        <LoadingScreen loadingText="Loading your skincare companion..." />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if rendering failed
+  if (renderError) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Wellness" height={50} backButton={true} />
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
       <CustomHeader
         title="AI Assistant"
         height={50}
@@ -222,7 +244,7 @@ const AiAssistantScreen = () => {
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
         {/* Messages Container */}
-        <View className="flex-1 px-container" style={{ paddingBottom: 0 }}>
+        <SafeAreaView edges={[]} className="flex-1 px-container" style={{ paddingBottom: 0 }}>
           <BorderlessShadowCard
             b_tl={24}
             b_tr={24}
@@ -357,7 +379,7 @@ const AiAssistantScreen = () => {
               </View>
             </BorderlessShadowCard>
           </View>
-        </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

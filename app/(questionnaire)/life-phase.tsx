@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FormLayout from '@/components/layouts/FormLayout';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
+
 import AuthFormTitle from '@/components/texts/auth/FormTitle';
 import { useToast } from '@/hooks/useToast';
 import { useScreenReady } from '@/hooks/useScreenReady';
-import { CrossIcon, PeriodIcon, PostpartumIcon, PregnantIcon } from '@/components/icons';
+import { MenoPauseIcon, PeriodIcon, PostpartumIcon, PregnantIcon } from '@/components/icons';
 import { CheckInCircleIcon } from '@/components/icons/CheckInCircleIcon';
-import { PlusInCircleIcon } from '@/components/icons';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
-
+// const PrimaryButton = lazy(() => import('@/components/buttons/PrimaryButton'));
 const CURRENT_PHASE = [
   {
     id: 'period',
@@ -38,15 +38,19 @@ const CURRENT_PHASE = [
       <PostpartumIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
   },
+  {
+    id: 'menopause',
+    label: 'Menopause',
+    value: 'menopause',
+    leftIcon: (color: string) => (
+      <MenoPauseIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
+    ),
+  },
 ];
 
 export default function LifePhaseScreen() {
   const [selectedCurrentPhase, setSelectedCurrentPhase] = useState<string | null>(null);
-  const [allergies, setAllergies] = useState<string[]>([]);
-  const [currentAllergy, setCurrentAllergy] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [modalReady, setModalReady] = useState(false);
+  const [isDealingWithAllergies, setIsDealingWithAllergies] = useState<boolean | null>(null);
   const router = useRouter();
   const { showError } = useToast();
 
@@ -57,61 +61,49 @@ export default function LifePhaseScreen() {
     initialReady: false,
   });
 
-  // Reset modal ready when modal opens
-  useEffect(() => {
-    if (modalVisible) {
-      setModalReady(false);
-      // Small delay to let modal render first
-      setTimeout(() => {
-        setModalReady(true);
-      }, 50);
-    }
-  }, [modalVisible]);
-
-  const addAllergy = () => {
-    if (!currentAllergy.trim()) {
-      return;
-    }
-
-    setIsAdding(true);
-
-    // Simulate API call or processing
-    setTimeout(() => {
-      setAllergies([...allergies, currentAllergy.trim()]);
-      setCurrentAllergy('');
-      setIsAdding(false);
-      setModalVisible(false);
-      setModalReady(false);
-    }, 500);
-  };
-
-  const removeAllergy = (index: number) => {
-    setAllergies(allergies.filter((_, i) => i !== index));
-  };
-
   const handleNext = async () => {
+    // Validate current phase selection
     if (!selectedCurrentPhase) {
       showError('Please select your current phase');
       return;
     }
 
+    // Validate allergy question
+    // if (isDealingWithAllergies === null) {
+    //   showError('Please answer whether you are dealing with allergies');
+    //   return;
+    // }
+
     try {
+      // Save current phase
       await AsyncStorage.setItem('user_current_phase', selectedCurrentPhase);
-      await AsyncStorage.setItem('user_allergies', JSON.stringify(allergies));
-      router.push('/(questionnaire)/skin-hair-condition');
+
+      // Save allergy status
+      await AsyncStorage.setItem(
+        'user_is_dealing_with_allergies',
+        isDealingWithAllergies.toString()
+      );
+
+      // If user is dealing with allergies, navigate to allergies screen
+      if (isDealingWithAllergies) {
+        router.push('/(questionnaire)/allergies');
+      } else {
+        // Otherwise, go to skin hair condition
+        router.push('/(questionnaire)/skin-hair-condition');
+      }
     } catch (error) {
+      console.error('Error saving data:', error);
       showError('Failed to save. Please try again.');
     }
   };
 
-  // Show loading while screen is rendering
   const handleRetry = () => {
-    router.replace('/(questionnaire)/budget');
+    router.replace('/(questionnaire)/life-phase');
   };
 
   // Show loading while screen is rendering
   if (isRendering) {
-    <LoadingScreen />;
+    return <LoadingScreen loadingText="Getting to know you..." />;
   }
 
   // Show error if rendering failed
@@ -139,11 +131,11 @@ export default function LifePhaseScreen() {
         </View>
 
         {/* Current Phase Section */}
-        <View className="mb-10">
+        <View className="">
           <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
             Current Phase
           </Text>
-          <Text className="font-outfit text-[14px] text-titleTextColor">
+          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
             What is your current phase?
           </Text>
           <View className="gap-3">
@@ -182,117 +174,35 @@ export default function LifePhaseScreen() {
           </View>
         </View>
 
-        {/* Allergies Section (Optional) */}
-        <View className="mb-8">
-          <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
-            Allergies
-          </Text>
-          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
-            Do you have any allergies? (Optional)
-          </Text>
+        <Text className="mt-6 font-outfitMedium text-[16px]" style={{ color: '#361A0D' }}>
+          Are you currently in the stage of selecting or eliminating allergies?
+        </Text>
 
-          {/* Display existing allergies as PrimaryButton with close icon */}
-          {allergies.length > 0 && (
-            <View className="mb-4 gap-3">
-              {allergies.map((allergy, index) => (
-                <PrimaryButton
-                  key={index}
-                  title={allergy}
-                  onPress={() => removeAllergy(index)}
-                  rightIcon={<CrossIcon size={24} color="#361A0D99" />}
-                  height={54}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                  }}
-                />
-              ))}
-            </View>
-          )}
+        <View className="my-6 h-[1px] bg-[#361A0D77]" />
 
-          {/* Add Allergy Button */}
+        <View className="flex-row items-center justify-between gap-3">
           <PrimaryButton
-            title="Add an allergy"
-            onPress={() => setModalVisible(true)}
-            height={54}
-            gradientColors={['#e2d2c1', '#e2d2c1']}
-            textClassName="text-[#4A3F35]"
-            leftIcon={<PlusInCircleIcon size={34} color="#95B287" />}
-            textStyle={{
-              fontSize: 16,
-              fontFamily: 'Outfit-Medium',
+            textStyle={{ fontFamily: 'Outfit-Medium', fontSize: 14 }}
+            title="Yes, I am"
+            height={45}
+            onPress={() => {
+              setIsDealingWithAllergies(true);
+              handleNext();
             }}
+            className="flex-1"
+          />
+          <PrimaryButton
+            textStyle={{ fontFamily: 'Outfit-Medium', fontSize: 14 }}
+            title="No, not yet"
+            height={45}
+            onPress={() => {
+              setIsDealingWithAllergies(false);
+              handleNext();
+            }}
+            className="flex-1"
           />
         </View>
-
-        <PrimaryButton title="Continue" onPress={handleNext} className="mb-3" />
       </View>
-
-      {/* Centered Modal for Adding Allergy */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => !isAdding && setModalVisible(false)}>
-        <View className="flex-1 items-center justify-center bg-black/50">
-          <View
-            className="mx-6 rounded-3xl border-white bg-[#E8DDD0] p-6 shadow-xl"
-            style={{
-              width: 320,
-              opacity: modalReady && !isAdding ? 1 : 0,
-              transform: [{ scale: modalReady && !isAdding ? 1 : 0.95 }],
-            }}>
-            {isAdding ? (
-              // Loading State
-              <View className="items-center py-8">
-                <ActivityIndicator size="large" color="#95B287" />
-                <Text className="mt-4 font-outfit text-[16px] text-titleTextColor">
-                  Adding allergy...
-                </Text>
-              </View>
-            ) : (
-              // Input State
-              <>
-                <View className="mb-4 items-center">
-                  <Text className="font-outfit text-[20px] font-semibold text-titleTextColor">
-                    Add Allergy
-                  </Text>
-                  <Text className="mt-1 text-center font-outfit text-[14px] text-titleTextColor/70">
-                    Enter the allergy you want to add
-                  </Text>
-                </View>
-
-                <TextInput
-                  value={currentAllergy}
-                  onChangeText={setCurrentAllergy}
-                  placeholder="e.g., nuts, dairy, pollen"
-                  placeholderTextColor="#A7A5AF"
-                  className="mb-6 rounded-full border border-[#E8DDD0] bg-white px-5 py-4 font-outfit text-[16px] text-[#4A3F35]"
-                  autoFocus
-                />
-
-                <View className="flex-row gap-3">
-                  <PrimaryButton
-                    onPress={() => setModalVisible(false)}
-                    title="Cancel"
-                    style={{ flex: 1 }}
-                    height={54}
-                  />
-
-                  <PrimaryButton
-                    gradientColors={['#95B287', '#95B287']}
-                    onPress={addAllergy}
-                    title="Add"
-                    style={{ flex: 1 }}
-                    height={54}
-                  />
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
     </FormLayout>
   );
 }

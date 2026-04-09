@@ -5,7 +5,8 @@ export default function QuestionnaireIndex() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/(questionnaire)/life-phase');
+    // router.replace('/(questionnaire)/life-phase');
+    router.replace('/(questionnaire)/personal-info');
   }, []);
 
   return null;

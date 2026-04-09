@@ -70,7 +70,7 @@ export const ArticleVideoPlayer: React.FC<ArticleVideoPlayerProps> = ({ videoUrl
             zIndex: 10,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.3)',
+            backgroundColor: 'rgba(0,0,0,0)',
           }}>
           <ActivityIndicator size="large" color="#7A8B6A" />
         </View>

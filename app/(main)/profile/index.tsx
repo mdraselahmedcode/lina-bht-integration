@@ -1,6 +1,6 @@
 /* eslint-disable import/no-unresolved */
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
@@ -20,12 +20,47 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useRouter } from 'expo-router';
 import { CircularIconButton } from '@/components/buttons/CircularIconButton';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Profile = () => {
   const router = useRouter();
-
   const { logout } = useAuth();
   const { showSuccess, showError } = useToast();
+
+  // State for user data
+  const [userName, setUserName] = useState('Elena Rossi');
+  const [userEmail, setUserEmail] = useState('testuser@skinsense.com');
+  const [userAvatar, setUserAvatar] = useState('https://randomuser.me/api/portraits/women/64.jpg');
+
+  // Screen ready state
+  const { isRendering, isContentReady, renderError } = useScreenReady({
+    dependencies: [],
+    delay: 100,
+    initialReady: false,
+  });
+
+  // Load user data from AsyncStorage
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        // You can load user data from AsyncStorage or your auth context
+        const name = await AsyncStorage.getItem('user_name');
+        const email = await AsyncStorage.getItem('user_email');
+        const avatar = await AsyncStorage.getItem('user_avatar');
+
+        if (name) setUserName(name);
+        if (email) setUserEmail(email);
+        if (avatar) setUserAvatar(avatar);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+
+    loadUserData();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -35,6 +70,29 @@ const Profile = () => {
       showError('Failed to log out. Please try again.');
     }
   };
+
+  const handleRetry = () => {
+    router.replace('/(main)/profile');
+  };
+
+  // Show loading while screen is rendering
+  if (isRendering) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Loading your profile..." />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if rendering failed
+  if (renderError) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Profile" height={50} backButton={true} />
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -61,7 +119,12 @@ const Profile = () => {
           flexGrow: 1,
         }}
         className="flex-1">
-        <View className="px-container">
+        <View
+          className="px-container"
+          style={{
+            opacity: isContentReady ? 1 : 0,
+            transform: [{ translateY: isContentReady ? 0 : 10 }],
+          }}>
           {/* Personal status Card */}
           <BorderlessShadowCard
             style={{
@@ -71,9 +134,8 @@ const Profile = () => {
             }}>
             <View className="flex-1 flex-row items-center gap-3">
               {/* Avatar Component */}
-
               <Avatar
-                source="https://randomuser.me/api/portraits/women/64.jpg"
+                source={userAvatar}
                 size={51}
                 fallbackIcon="person-circle"
                 iconColor="#361A0D"
@@ -85,15 +147,15 @@ const Profile = () => {
                   <Text
                     className="flex-1 font-outfitMedium text-[24px]"
                     style={{ color: '#2A2118' }}>
-                    Elena Rossi
+                    {userName}
                   </Text>
                   <PillowBadge title="Free Plan" />
                 </View>
                 <Text
                   numberOfLines={1}
-                  className="font-primous text-[16px]  "
+                  className="font-primous text-[16px]"
                   style={{ color: '#2A2118CC' }}>
-                  testuser@skinsense.com
+                  {userEmail}
                 </Text>
               </View>
             </View>

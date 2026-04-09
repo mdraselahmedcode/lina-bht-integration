@@ -11,6 +11,8 @@ import { QuickActionsRow } from '@/components/home/QuickActionsRow';
 import { SkinProgressCard } from '@/components/home/SkinProgressCard';
 import { MorningRoutineCard } from '@/components/home/MorningRoutineCard';
 import { LAYOUT } from '@/constants/constants';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
 
 export default function HomeScreen() {
   const {
@@ -29,31 +31,16 @@ export default function HomeScreen() {
     refetch,
   } = useHomeScreen();
 
-  // Loading state
+  // Loading state from API
   if (isLoading) {
-    return (
-      <SafeAreaView
-        edges={['top', 'right']}
-        className="flex-1 items-center justify-center bg-[#E8DDD0]">
-        <ActivityIndicator size="large" color="#759A52" />
-      </SafeAreaView>
-    );
+    return <LoadingScreen loadingText="Loading your dashboard..." />;
   }
 
-  // Error state
+  // Error state from API
   if (isError || !homeData) {
     return (
-      <SafeAreaView
-        edges={['top', 'right']}
-        className="flex-1 items-center justify-center bg-backgroundColor">
-        <View className="items-center px-6">
-          <Text className="mb-4 text-center font-outfit text-[16px] text-red-500">
-            Failed to load home data
-          </Text>
-          <TouchableOpacity onPress={refetch} className="rounded-full bg-[#95B287] px-6 py-3">
-            <Text className="font-outfit text-white">Try Again</Text>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <ErrorScreen message="Failed to load home data" onRetry={refetch} />
       </SafeAreaView>
     );
   }

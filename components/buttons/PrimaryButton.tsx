@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shadow } from 'react-native-shadow-2';
+import { memo, useMemo } from 'react';
 
 type ButtonProps = {
   title?: string;
@@ -28,7 +29,7 @@ type ButtonProps = {
   height?: number;
 };
 
-export default function PrimaryButton({
+function PrimaryButton({
   title,
   onPress,
   disabled = false,
@@ -103,18 +104,8 @@ export default function PrimaryButton({
     </TouchableOpacity>
   );
 
-  if (!withShadow) {
+  const shadowButton = useMemo(() => {
     return (
-      <View style={style} className={className}>
-        {ButtonContent}
-      </View>
-    );
-  }
-
-  // Multi-layer shadow with proper fade from dark to nothing
-  return (
-    <View style={style} className={className}>
-      {/* Layer 1: Outer soft shadow - long fade */}
       <Shadow
         stretch
         distance={8}
@@ -155,6 +146,142 @@ export default function PrimaryButton({
           </Shadow>
         </Shadow>
       </Shadow>
+    );
+  }, [onPress]);
+
+  if (!withShadow) {
+    return (
+      <View style={style} className={className}>
+        {ButtonContent}
+      </View>
+    );
+  }
+
+  // Multi-layer shadow with proper fade from dark to nothing
+  return (
+    <View style={style} className={className}>
+      {/* Layer 1: Outer soft shadow - long fade */}
+      {shadowButton}
     </View>
   );
 }
+export default memo(PrimaryButton);
+
+// import {
+//   TouchableOpacity,
+//   Text,
+//   View,
+//   ViewStyle,
+//   StyleProp,
+//   ActivityIndicator,
+//   TextStyle,
+//   Platform,
+// } from 'react-native';
+// import { LinearGradient } from 'expo-linear-gradient';
+
+// type ButtonProps = {
+//   title?: string;
+//   onPress?: () => void;
+//   disabled?: boolean;
+//   className?: string;
+//   textClassName?: string;
+//   leftIcon?: React.ReactNode;
+//   rightIcon?: React.ReactNode;
+//   style?: StyleProp<ViewStyle>;
+//   textStyle?: StyleProp<TextStyle>;
+//   isLoading?: boolean;
+//   loaderColor?: string;
+//   gradientColors?: readonly [string, string, ...string[]];
+//   withShadow?: boolean;
+//   height?: number;
+// };
+
+// export default function PrimaryButtonFast({
+//   title,
+//   onPress,
+//   disabled = false,
+//   className = '',
+//   textClassName = '',
+//   textStyle,
+//   leftIcon,
+//   rightIcon,
+//   isLoading = false,
+//   loaderColor = '#FFFFFF',
+//   height = 64,
+//   style,
+//   gradientColors = ['#e2d2c1', '#e2d2c1'],
+//   withShadow = true,
+// }: ButtonProps) {
+//   const isButtonDisabled = disabled || isLoading;
+
+//   const ButtonContent = (
+//     <TouchableOpacity
+//       onPress={onPress}
+//       activeOpacity={0.7}
+//       disabled={isButtonDisabled}
+//       style={{
+//         opacity: isButtonDisabled ? 0.5 : 1,
+//         height: height,
+//         borderRadius: 100,
+//         overflow: 'hidden',
+//       }}>
+//       <LinearGradient
+//         colors={gradientColors}
+//         start={{ x: 0, y: 0 }}
+//         end={{ x: 1, y: 1 }}
+//         style={{
+//           flex: 1,
+//           flexDirection: 'row',
+//           alignItems: 'center',
+//           justifyContent: 'space-between',
+//           paddingHorizontal: 16,
+//           borderRadius: 100,
+//           // Simple border for light effect (much faster than multiple shadows)
+//           borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+//           borderColor: 'rgba(255, 255, 255, 0.6)',
+//         }}>
+//         {isLoading ? (
+//           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+//             <ActivityIndicator size="small" color={loaderColor} />
+//           </View>
+//         ) : (
+//           <>
+//             <View style={{ width: 24, alignItems: 'flex-start' }}>{leftIcon}</View>
+//             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+//               <Text
+//                 className={`font-outfitMedium text-btn20 text-[#361A0D] ${textClassName}`}
+//                 style={[{ textAlign: 'center' }, textStyle]}>
+//                 {title}
+//               </Text>
+//             </View>
+//             <View style={{ width: 24, alignItems: 'flex-end' }}>{rightIcon}</View>
+//           </>
+//         )}
+//       </LinearGradient>
+//     </TouchableOpacity>
+//   );
+
+//   // Simple shadow using elevation for Android and basic shadow for iOS
+//   if (withShadow) {
+//     return (
+//       <View style={[style]}>
+//         <View
+//           style={{
+//             shadowColor: '#000',
+//             shadowOffset: { width: 0, height: 2 },
+//             shadowOpacity: 0.1,
+//             shadowRadius: 4,
+//             elevation: 3,
+//           }}>
+//           {ButtonContent}
+//         </View>
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <View style={style} className={className}>
+//       {ButtonContent}
+//     </View>
+//   );
+// }

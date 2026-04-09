@@ -86,3 +86,5 @@ export { SupportIcon } from './SupportIcon';
 export { GearIcon } from './GearIcon';
 
 export { ArticleIcon } from './ArticleIcon';
+
+export { MenoPauseIcon } from './MenopauseIcon';

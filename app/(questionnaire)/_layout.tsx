@@ -17,9 +17,11 @@ export default function QuestionnaireLayout() {
             backgroundColor: 'transparent',
           },
         }}>
+        <Stack.Screen name="personal-info" />
         <Stack.Screen name="life-phase" />
         <Stack.Screen name="skin-hair-condition" />
         <Stack.Screen name="budget" />
+        <Stack.Screen name="allergies" />
       </Stack>
     </View>
   );

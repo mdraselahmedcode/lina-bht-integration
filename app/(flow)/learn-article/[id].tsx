@@ -8,11 +8,15 @@
 // import { LAYOUT } from '@/constants/constants';
 // import { SAMPLE_ARTICLES } from '@/constants/sampleArticles';
 // import { ArticleVideoPlayer } from '@/components/articles/ArticleVideoPlayer';
+// import { HTMLRenderer } from '@/components/articles/HTMLRenderer';
 
 // export default function ArticleDetailScreen() {
 //   const { id } = useLocalSearchParams();
 //   const router = useRouter();
-//   const article = SAMPLE_ARTICLES.find((a) => a.id === id);
+
+//   // Make sure id is a string
+//   const articleId = Array.isArray(id) ? id[0] : id;
+//   const article = SAMPLE_ARTICLES.find((a) => a.id === articleId);
 
 //   if (!article) {
 //     return (
@@ -25,7 +29,6 @@
 //     );
 //   }
 
-//   // Check if article has a video URL
 //   const hasVideo = article.videoUrl && article.videoUrl.length > 0;
 
 //   return (
@@ -70,13 +73,37 @@
 //             </Text>
 //           </View>
 
+//           {/* Author */}
+//           {/* {article.author && (
+//             <View className="mt-2 flex-row items-center gap-1">
+//               <Ionicons name="person-outline" size={14} color="#2E2117CC" />
+//               <Text className="font-outfit text-[12px]" style={{ color: '#2E2117CC' }}>
+//                 {article.author}
+//               </Text>
+//             </View>
+//           )} */}
+
+//           {/* Published Date */}
+//           {/* {article.publishedDate && (
+//             // <View className="mt-2 flex-row items-center gap-1">
+//             //   <Ionicons name="calendar-outline" size={14} color="#2E2117CC" />
+//             //   <Text className="font-outfit text-[12px]" style={{ color: '#2E2117CC' }}>
+//             //     {new Date(article.publishedDate).toLocaleDateString()}
+//             //   </Text>
+//             // </View>
+//           )} */}
+
+//           {/* Divider */}
+//           <View className="my-4 h-[1px] bg-[#2E2117]/10" />
+
 //           {/* Content */}
-//           <View className="mt-6">
+//           {article.content ? (
+//             <HTMLRenderer content={article.content} />
+//           ) : (
 //             <Text className="font-outfit text-[14px] leading-6" style={{ color: '#2E2117CC' }}>
 //               {article.description}
 //             </Text>
-//             {/* Add more detailed content here */}
-//           </View>
+//           )}
 //         </View>
 //       </ScrollView>
 //     </SafeAreaView>
@@ -84,8 +111,8 @@
 // }
 
 // app/(flow)/learn-article/[id].tsx
-import React from 'react';
-import { ScrollView, View, Text, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,27 +121,81 @@ import { LAYOUT } from '@/constants/constants';
 import { SAMPLE_ARTICLES } from '@/constants/sampleArticles';
 import { ArticleVideoPlayer } from '@/components/articles/ArticleVideoPlayer';
 import { HTMLRenderer } from '@/components/articles/HTMLRenderer';
+import LoadingScreen from '@/components/loading/LoadingScreen';
 
 export default function ArticleDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const [article, setArticle] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Make sure id is a string
   const articleId = Array.isArray(id) ? id[0] : id;
-  const article = SAMPLE_ARTICLES.find((a) => a.id === articleId);
 
-  if (!article) {
+  useEffect(() => {
+    loadArticle();
+  }, [articleId]);
+
+  const loadArticle = () => {
+    try {
+      // Small delay to simulate loading (optional)
+      setTimeout(() => {
+        const foundArticle = SAMPLE_ARTICLES.find((a) => a.id === articleId);
+        if (!foundArticle) {
+          setError('Article not found');
+        } else {
+          setArticle(foundArticle);
+        }
+        setIsLoading(false);
+      }, 300);
+    } catch (err) {
+      setError('Failed to load article');
+      console.error('Error loading article:', err);
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setError(null);
+    loadArticle();
+  };
+
+  const hasVideo = article?.videoUrl && article.videoUrl.length > 0;
+
+  // Show loading state
+  if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
         <CustomHeader title="Article" height={50} backButton={true} />
         <View className="flex-1 items-center justify-center">
-          <Text>Article not found</Text>
+          <ActivityIndicator size="large" color="#759A52" />
+          <Text className="mt-3 font-outfit text-[14px]" style={{ color: '#2E211799' }}>
+            Loading article...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const hasVideo = article.videoUrl && article.videoUrl.length > 0;
+  // Show error if article not found
+  if (error || !article) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Article" height={50} backButton={true} />
+        <View className="flex-1 items-center justify-center px-6">
+          <Ionicons name="document-text-outline" size={64} color="#2E211733" />
+          <Text className="mt-4 text-center font-outfit text-[16px]" style={{ color: '#2E2117CC' }}>
+            {error || 'Article not found'}
+          </Text>
+          <Text className="mt-2 text-center font-outfit text-[14px]" style={{ color: '#2E211799' }}>
+            The article you&apos;re looking for doesn&apos;t exist or has been removed.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -157,26 +238,6 @@ export default function ArticleDetailScreen() {
               {article.readTime}
             </Text>
           </View>
-
-          {/* Author */}
-          {/* {article.author && (
-            <View className="mt-2 flex-row items-center gap-1">
-              <Ionicons name="person-outline" size={14} color="#2E2117CC" />
-              <Text className="font-outfit text-[12px]" style={{ color: '#2E2117CC' }}>
-                {article.author}
-              </Text>
-            </View>
-          )} */}
-
-          {/* Published Date */}
-          {/* {article.publishedDate && (
-            // <View className="mt-2 flex-row items-center gap-1">
-            //   <Ionicons name="calendar-outline" size={14} color="#2E2117CC" />
-            //   <Text className="font-outfit text-[12px]" style={{ color: '#2E2117CC' }}>
-            //     {new Date(article.publishedDate).toLocaleDateString()}
-            //   </Text>
-            // </View>
-          )} */}
 
           {/* Divider */}
           <View className="my-4 h-[1px] bg-[#2E2117]/10" />

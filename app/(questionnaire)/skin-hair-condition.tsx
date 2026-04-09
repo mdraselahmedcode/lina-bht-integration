@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, Modal, ActivityIndicator, Animated } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FormLayout from '@/components/layouts/FormLayout';
@@ -10,7 +10,6 @@ import { useScreenReady } from '@/hooks/useScreenReady';
 import {
   CoilyOrKinkyHairIcon,
   CombinationSkinIcon,
-  CrossIcon,
   CurlyHairIcon,
   DrySkinIcon,
   NormalSkinIcon,
@@ -19,8 +18,7 @@ import {
   StraightHairIcon,
   WavyHairIcon,
 } from '@/components/icons';
-import { CheckInCircleIcon } from '@/components/icons/CheckInCircleIcon';
-import { PlusInCircleIcon } from '@/components/icons';
+import { RadioButton } from '@/components/buttons/RadioButton';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
 
@@ -33,7 +31,6 @@ const SKIN_TYPE = [
     leftIcon: (color: string) => (
       <DrySkinIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
-    // leftIcon: (color: string) => <CurlyHairIcon color={'red'} />,
   },
   {
     id: 'combination',
@@ -42,7 +39,6 @@ const SKIN_TYPE = [
     leftIcon: (color: string) => (
       <CombinationSkinIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
-    // leftIcon: (color: string) => <CurlyHairIcon color={'red'} />,
   },
   {
     id: 'normal',
@@ -51,7 +47,6 @@ const SKIN_TYPE = [
     leftIcon: (color: string) => (
       <NormalSkinIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
-    // leftIcon: (color: string) => <CurlyHairIcon color={'red'} />,
   },
   {
     id: 'oily',
@@ -60,9 +55,7 @@ const SKIN_TYPE = [
     leftIcon: (color: string) => (
       <OilySkinIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
-    // leftIcon: (color: string) => <CurlyHairIcon color={'red'} />,
   },
-
   {
     id: 'sensitive',
     label: 'Sensitive',
@@ -70,19 +63,15 @@ const SKIN_TYPE = [
     leftIcon: (color: string) => (
       <SensitiveSkinIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
-
-    // leftIcon: (color: string) => <CurlyHairIcon color={'red'} />,
   },
 ];
 
-// ==================== SKIN CONCERNS (preset options) ====================
+// ==================== SKIN CONCERNS (simplified) ====================
 const SKIN_CONCERNS_OPTIONS = [
-  { id: 'acne', label: 'Acne', value: 'acne' },
-  { id: 'wrinkles', label: 'Wrinkles', value: 'wrinkles' },
-  { id: 'dark_spots', label: 'Dark Spots', value: 'dark_spots' },
-  { id: 'redness', label: 'Redness', value: 'redness' },
+  { id: 'acne', label: 'Acne, Pimple', value: 'acne_pimple' },
+  { id: 'irritation', label: 'Irritation, redness', value: 'irritation_redness' },
+  { id: 'pigmentation', label: 'Pigmentation', value: 'pigmentation' },
   { id: 'dullness', label: 'Dullness', value: 'dullness' },
-  { id: 'large_pores', label: 'Large Pores', value: 'large_pores' },
 ];
 
 // ==================== HAIR TYPE (with icons) ====================
@@ -121,84 +110,43 @@ const HAIR_TYPE = [
   },
 ];
 
-// ==================== HAIR CONCERNS (preset options) ====================
+// ==================== HAIR CONCERNS (simplified) ====================
 const HAIR_CONCERNS_OPTIONS = [
-  { id: 'hair_fall', label: 'Hair Fall', value: 'hair_fall' },
+  { id: 'hair_fall', label: 'Hair fall', value: 'hair_fall' },
   { id: 'dandruff', label: 'Dandruff', value: 'dandruff' },
-  { id: 'dry_scalp', label: 'Dry Scalp', value: 'dry_scalp' },
   { id: 'oily_scalp', label: 'Oily Scalp', value: 'oily_scalp' },
-  { id: 'frizz', label: 'Frizz', value: 'frizz' },
-  { id: 'damage', label: 'Damage', value: 'damage' },
+  { id: 'dry_scalp', label: 'Dry Scalp', value: 'dry_scalp' },
 ];
 
 export default function SkinHairConditionScreen() {
+  const router = useRouter();
+  const { showError } = useToast();
+  const { width: screenWidth } = useWindowDimensions();
   const [selectedSkinType, setSelectedSkinType] = useState<string | null>(null);
   const [selectedSkinConcerns, setSelectedSkinConcerns] = useState<string[]>([]);
   const [selectedHairType, setSelectedHairType] = useState<string | null>(null);
   const [selectedHairConcerns, setSelectedHairConcerns] = useState<string[]>([]);
 
-  // Modal state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [currentConcern, setCurrentConcern] = useState('');
-  const [concernType, setConcernType] = useState<'skin' | 'hair'>('skin');
-  const [modalReady, setModalReady] = useState(false);
-
-  const router = useRouter();
-  const { showError } = useToast();
-
-  const { isRendering, renderError, isContentReady } = useScreenReady({
+  const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
     delay: 100,
     initialReady: false,
   });
 
-  // Reset modal ready when modal opens
-  useEffect(() => {
-    if (modalVisible) {
-      setModalReady(false);
-      setTimeout(() => {
-        setModalReady(true);
-      }, 50);
+  const toggleSkinConcern = (concernValue: string) => {
+    if (selectedSkinConcerns.includes(concernValue)) {
+      setSelectedSkinConcerns(selectedSkinConcerns.filter((item) => item !== concernValue));
+    } else {
+      setSelectedSkinConcerns([...selectedSkinConcerns, concernValue]);
     }
-  }, [modalVisible]);
-
-  const openModal = (type: 'skin' | 'hair') => {
-    setConcernType(type);
-    setModalVisible(true);
   };
 
-  const closeModal = () => {
-    setModalVisible(false);
-    setCurrentConcern('');
-    setIsAdding(false);
-    setModalReady(false);
-  };
-
-  const addConcern = () => {
-    if (!currentConcern.trim()) return;
-
-    setIsAdding(true);
-
-    setTimeout(() => {
-      const newConcern = currentConcern.trim();
-      if (concernType === 'skin') {
-        setSelectedSkinConcerns([...selectedSkinConcerns, newConcern]);
-      } else {
-        setSelectedHairConcerns([...selectedHairConcerns, newConcern]);
-      }
-      setCurrentConcern('');
-      setIsAdding(false);
-      closeModal();
-    }, 500);
-  };
-
-  const removeSkinConcern = (index: number) => {
-    setSelectedSkinConcerns(selectedSkinConcerns.filter((_, i) => i !== index));
-  };
-
-  const removeHairConcern = (index: number) => {
-    setSelectedHairConcerns(selectedHairConcerns.filter((_, i) => i !== index));
+  const toggleHairConcern = (concernValue: string) => {
+    if (selectedHairConcerns.includes(concernValue)) {
+      setSelectedHairConcerns(selectedHairConcerns.filter((item) => item !== concernValue));
+    } else {
+      setSelectedHairConcerns([...selectedHairConcerns, concernValue]);
+    }
   };
 
   const handleNext = async () => {
@@ -207,27 +155,40 @@ export default function SkinHairConditionScreen() {
       return;
     }
 
+    if (!selectedHairType) {
+      showError('Please select your hair type');
+      return;
+    }
+
     try {
       await AsyncStorage.setItem('user_skin_type', selectedSkinType);
       await AsyncStorage.setItem('user_skin_concerns', JSON.stringify(selectedSkinConcerns));
-      await AsyncStorage.setItem('user_hair_type', selectedHairType || '');
+      await AsyncStorage.setItem('user_hair_type', selectedHairType);
       await AsyncStorage.setItem('user_hair_concerns', JSON.stringify(selectedHairConcerns));
       router.push('/(questionnaire)/budget');
     } catch (error) {
+      console.error('Error saving data:', error);
       showError('Failed to save. Please try again.');
     }
   };
 
   const handleRetry = () => {
-    router.replace('/(questionnaire)/budget');
+    router.replace('/(questionnaire)/skin-hair-condition');
   };
 
-  // Show loading while screen is rendering
+  // Determine number of columns based on screen width
+  const getColumnsCount = () => {
+    if (screenWidth < 380) return 1;
+    if (screenWidth < 600) return 2;
+    return 3;
+  };
+
+  const columns = getColumnsCount();
+
   if (isRendering) {
-    <LoadingScreen />;
+    return <LoadingScreen loadingText="Loading your preferences..." />;
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
@@ -238,303 +199,235 @@ export default function SkinHairConditionScreen() {
 
   return (
     <FormLayout>
-      <View
-        className="px-container py-9"
-        style={{
-          opacity: isContentReady ? 1 : 0,
-          transform: [{ translateY: isContentReady ? 0 : 10 }],
-        }}>
-        <View className={'mb-10'}>
-          <AuthFormTitle text="Skin & Hair" />
-          <Text className="text-center font-outfit text-[14px] text-titleTextColor">
-            Tell us your current skin and hair condition
-          </Text>
-        </View>
-
-        {/* ==================== SKIN SECTION ==================== */}
-        {/* Skin Type Section */}
-        <View className="mb-6">
-          <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
-            Skin Type
-          </Text>
-          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
-            How would you describe your skin?
-          </Text>
-          <View className="gap-3">
-            {SKIN_TYPE.map((option) => {
-              const isSelected = selectedSkinType === option.value;
-              const activeColor = '#759A52';
-              const inactiveColor = '#361A0D';
-              const iconColor = isSelected ? activeColor : inactiveColor;
-
-              return (
-                <PrimaryButton
-                  key={option.id}
-                  title={option.label}
-                  onPress={() => setSelectedSkinType(option.value)}
-                  leftIcon={option.leftIcon(iconColor)}
-                  rightIcon={
-                    isSelected ? (
-                      <CheckInCircleIcon size={24} color="#759A52" style={{ marginRight: 6 }} />
-                    ) : (
-                      <CheckInCircleIcon size={24} color="#361A0D" style={{ marginRight: 6 }} />
-                    )
-                  }
-                  height={56}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                    width: '100%',
-                    textAlign: 'left',
-                    marginLeft: 40,
-                  }}
-                />
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Skin Concerns Section */}
-        <View className="mb-6">
-          <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
-            Skin Concerns
-          </Text>
-          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
-            What skin concerns do you have? (Select all that apply)
-          </Text>
-
-          {/* Existing Skin Concerns */}
-          {selectedSkinConcerns.length > 0 && (
-            <View className="mb-4 gap-3">
-              {selectedSkinConcerns.map((concern, index) => (
-                <PrimaryButton
-                  key={`skin-concern-${index}`}
-                  title={concern}
-                  onPress={() => removeSkinConcern(index)}
-                  rightIcon={<CrossIcon size={24} color="#361A0D99" />}
-                  height={56}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                  }}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Preset Skin Concerns */}
-          <View className="mb-4 flex-row flex-wrap gap-3">
-            {SKIN_CONCERNS_OPTIONS.map((option) => (
-              <PrimaryButton
-                key={option.id}
-                title={option.label}
-                onPress={() => {
-                  if (!selectedSkinConcerns.includes(option.value)) {
-                    setSelectedSkinConcerns([...selectedSkinConcerns, option.value]);
-                  }
-                }}
-                height={40}
-                withShadow={false}
-                gradientColors={['#E8DDD0', '#E8DDD0']}
-                textClassName="text-[#4A3F35]"
-                textStyle={{ fontSize: 14 }}
-                className="px-4"
-              />
-            ))}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
+        <View
+          className="px-container py-9"
+          style={{
+            opacity: isContentReady ? 1 : 0,
+            transform: [{ translateY: isContentReady ? 0 : 10 }],
+          }}>
+          <View className="mb-8">
+            <AuthFormTitle text="Skin & Hair" />
+            <Text className="text-center font-outfit text-[14px] text-titleTextColor">
+              Tell us your current skin and hair condition
+            </Text>
           </View>
 
-          {/* Add Custom Skin Concern Button */}
-          <PrimaryButton
-            title="Add custom concern"
-            onPress={() => openModal('skin')}
-            height={56}
-            gradientColors={['#e2d2c1', '#e2d2c1']}
-            textClassName="text-[#4A3F35]"
-            leftIcon={<PlusInCircleIcon size={34} color="#95B287" />}
-            textStyle={{
-              fontSize: 16,
-              fontFamily: 'Outfit-Medium',
-            }}
-          />
-        </View>
+          {/* ==================== SKIN SECTION ==================== */}
+          {/* Skin Type Section */}
+          <View className="mb-6">
+            <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
+              Skin Type
+            </Text>
+            <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
+              How would you describe your skin?
+            </Text>
+            <View className="gap-3">
+              {SKIN_TYPE.map((option) => {
+                const isSelected = selectedSkinType === option.value;
+                const activeColor = '#759A52';
+                const inactiveColor = '#361A0D';
+                const iconColor = isSelected ? activeColor : inactiveColor;
 
-        {/* ==================== HAIR SECTION ==================== */}
-        {/* Hair Type Section */}
-        <View className="mb-6">
-          <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
-            Hair Type
-          </Text>
-          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
-            How would you describe your hair?
-          </Text>
-          <View className="gap-3">
-            {HAIR_TYPE.map((option) => {
-              const isSelected = selectedHairType === option.value;
-              const activeColor = '#759A52';
-              const inactiveColor = '#361A0D';
-              const iconColor = isSelected ? activeColor : inactiveColor;
-
-              return (
-                <PrimaryButton
-                  key={option.id}
-                  title={option.label}
-                  onPress={() => setSelectedHairType(option.value)}
-                  leftIcon={option.leftIcon(iconColor)}
-                  rightIcon={
-                    isSelected ? (
-                      <CheckInCircleIcon size={24} color="#759A52" style={{ marginRight: 6 }} />
-                    ) : (
-                      <CheckInCircleIcon size={24} color="#361A0D" style={{ marginRight: 6 }} />
-                    )
-                  }
-                  height={56}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                    width: '100%',
-                    textAlign: 'left',
-                    marginLeft: 40,
-                  }}
-                />
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Hair Concerns Section */}
-        <View className="mb-8">
-          <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
-            Hair Concerns
-          </Text>
-          <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
-            What hair concerns do you have? (Select all that apply)
-          </Text>
-
-          {/* Existing Hair Concerns */}
-          {selectedHairConcerns.length > 0 && (
-            <View className="mb-4 gap-3">
-              {selectedHairConcerns.map((concern, index) => (
-                <PrimaryButton
-                  key={`hair-concern-${index}`}
-                  title={concern}
-                  onPress={() => removeHairConcern(index)}
-                  rightIcon={<CrossIcon size={24} color="#361A0D99" />}
-                  height={56}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                  }}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Preset Hair Concerns */}
-          <View className="mb-4 flex-row flex-wrap gap-3">
-            {HAIR_CONCERNS_OPTIONS.map((option) => (
-              <PrimaryButton
-                key={option.id}
-                title={option.label}
-                onPress={() => {
-                  if (!selectedHairConcerns.includes(option.value)) {
-                    setSelectedHairConcerns([...selectedHairConcerns, option.value]);
-                  }
-                }}
-                height={40}
-                withShadow={false}
-                gradientColors={['#E8DDD0', '#E8DDD0']}
-                textClassName="text-[#4A3F35]"
-                textStyle={{ fontSize: 14 }}
-                className="px-4"
-              />
-            ))}
-          </View>
-
-          {/* Add Custom Hair Concern Button */}
-          <PrimaryButton
-            title="Add custom concern"
-            onPress={() => openModal('hair')}
-            height={56}
-            gradientColors={['#e2d2c1', '#e2d2c1']}
-            textClassName="text-[#4A3F35]"
-            leftIcon={<PlusInCircleIcon size={34} color="#95B287" />}
-            textStyle={{
-              fontSize: 16,
-              fontFamily: 'Outfit-Medium',
-            }}
-          />
-        </View>
-
-        <PrimaryButton title="Continue" onPress={handleNext} className="mb-3" />
-      </View>
-
-      {/* Centered Modal for Adding Custom Concern */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => !isAdding && closeModal()}>
-        <View className="flex-1 items-center justify-center bg-black/50">
-          <View
-            className="mx-6 rounded-3xl border-white bg-[#E8DDD0] p-6 shadow-xl"
-            style={{
-              width: 320,
-              opacity: modalReady && !isAdding ? 1 : 0,
-              transform: [{ scale: modalReady && !isAdding ? 1 : 0.95 }],
-            }}>
-            {isAdding ? (
-              <View className="items-center py-8">
-                <ActivityIndicator size="large" color="#95B287" />
-                <Text className="mt-4 font-outfit text-[16px] text-titleTextColor">
-                  Adding {concernType === 'skin' ? 'skin' : 'hair'} concern...
-                </Text>
-              </View>
-            ) : (
-              <>
-                <View className="mb-4 items-center">
-                  <Text className="font-outfit text-[20px] font-semibold text-titleTextColor">
-                    Add {concernType === 'skin' ? 'Skin' : 'Hair'} Concern
-                  </Text>
-                  <Text className="mt-1 text-center font-outfit text-[14px] text-titleTextColor/70">
-                    Enter the {concernType === 'skin' ? 'skin' : 'hair'} concern you want to add
-                  </Text>
-                </View>
-
-                <TextInput
-                  value={currentConcern}
-                  onChangeText={setCurrentConcern}
-                  placeholder={`e.g., ${concernType === 'skin' ? 'rosacea, eczema' : 'split ends, thinning'}`}
-                  placeholderTextColor="#A7A5AF"
-                  className="mb-6 rounded-full border border-[#E8DDD0] bg-white px-5 py-4 font-outfit text-[16px] text-[#4A3F35]"
-                  autoFocus
-                />
-
-                <View className="flex-row gap-3">
+                return (
                   <PrimaryButton
-                    onPress={closeModal}
-                    title="Cancel"
-                    style={{ flex: 1 }}
+                    key={option.id}
+                    title={option.label}
+                    onPress={() => setSelectedSkinType(option.value)}
+                    leftIcon={option.leftIcon(iconColor)}
+                    rightIcon={
+                      <RadioButton
+                        value={isSelected}
+                        onValueChange={() => setSelectedSkinType(option.value)}
+                        activeColor="#759A52"
+                        inactiveColor="#FFFFFF80"
+                        size={34}
+                        innerCircleSize={20}
+                      />
+                    }
                     height={56}
+                    gradientColors={['#e2d2c1', '#e2d2c1']}
+                    textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                    textStyle={{
+                      fontSize: 14,
+                      fontFamily: 'Outfit-Regular',
+                      width: '100%',
+                      textAlign: 'left',
+                      marginLeft: 40,
+                    }}
                   />
-                  <PrimaryButton
-                    gradientColors={['#95B287', '#95B287']}
-                    onPress={addConcern}
-                    title="Add"
-                    style={{ flex: 1 }}
-                    height={56}
-                  />
-                </View>
-              </>
-            )}
+                );
+              })}
+            </View>
           </View>
+
+          {/* Skin Concerns Section */}
+          <View className="mb-6">
+            <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
+              Skin Concerns
+            </Text>
+            <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
+              What skin concerns do you have? (Select all that apply)
+            </Text>
+
+            {/* Skin Concerns Grid - Responsive columns */}
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+              }}>
+              {SKIN_CONCERNS_OPTIONS.map((option) => {
+                const isSelected = selectedSkinConcerns.includes(option.value);
+                return (
+                  <View
+                    key={option.id}
+                    style={{
+                      width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
+                      marginBottom: 12,
+                    }}>
+                    <PrimaryButton
+                      title={option.label}
+                      onPress={() => toggleSkinConcern(option.value)}
+                      leftIcon={
+                        <RadioButton
+                          value={isSelected}
+                          onValueChange={() => toggleSkinConcern(option.value)}
+                          activeColor="#759A52"
+                          inactiveColor="#FFFFFF80"
+                          size={34}
+                          innerCircleSize={20}
+                        />
+                      }
+                      height={56}
+                      withShadow={true}
+                      gradientColors={isSelected ? ['#E8DDD0', '#E8DDD0'] : ['#E8DDD0', '#E8DDD0']}
+                      textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                      textStyle={{
+                        fontSize: columns === 1 ? 15 : 13,
+                        fontFamily: 'Outfit-Medium',
+                        textAlign: 'center',
+                        flexWrap: 'wrap',
+                        flexShrink: 1,
+                        marginLeft: columns === 1 ? 0 : 8,
+                      }}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* ==================== HAIR SECTION ==================== */}
+          {/* Hair Type Section */}
+          <View className="mb-6">
+            <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
+              Hair Type
+            </Text>
+            <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
+              How would you describe your hair?
+            </Text>
+            <View className="gap-3">
+              {HAIR_TYPE.map((option) => {
+                const isSelected = selectedHairType === option.value;
+                const activeColor = '#759A52';
+                const inactiveColor = '#361A0D';
+                const iconColor = isSelected ? activeColor : inactiveColor;
+
+                return (
+                  <PrimaryButton
+                    key={option.id}
+                    title={option.label}
+                    onPress={() => setSelectedHairType(option.value)}
+                    leftIcon={option.leftIcon(iconColor)}
+                    rightIcon={
+                      <RadioButton
+                        value={isSelected}
+                        onValueChange={() => setSelectedHairType(option.value)}
+                        activeColor="#759A52"
+                        inactiveColor="#FFFFFF80"
+                        size={34}
+                        innerCircleSize={20}
+                      />
+                    }
+                    height={56}
+                    gradientColors={['#e2d2c1', '#e2d2c1']}
+                    textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                    textStyle={{
+                      fontSize: 14,
+                      fontFamily: 'Outfit-Regular',
+                      width: '100%',
+                      textAlign: 'left',
+                      marginLeft: 40,
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Hair Concerns Section */}
+          <View className="mb-8">
+            <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
+              Hair Concerns
+            </Text>
+            <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
+              What hair concerns do you have? (Select all that apply)
+            </Text>
+
+            {/* Hair Concerns Grid - Responsive columns */}
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+              }}>
+              {HAIR_CONCERNS_OPTIONS.map((option) => {
+                const isSelected = selectedHairConcerns.includes(option.value);
+                return (
+                  <View
+                    key={option.id}
+                    style={{
+                      width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
+                      marginBottom: 12,
+                    }}>
+                    <PrimaryButton
+                      title={option.label}
+                      onPress={() => toggleHairConcern(option.value)}
+                      leftIcon={
+                        <RadioButton
+                          value={isSelected}
+                          onValueChange={() => toggleHairConcern(option.value)}
+                          activeColor="#759A52"
+                          inactiveColor="#FFFFFF80"
+                          size={34}
+                          innerCircleSize={20}
+                        />
+                      }
+                      height={56}
+                      withShadow={true}
+                      gradientColors={isSelected ? ['#E8DDD0', '#E8DDD0'] : ['#E8DDD0', '#E8DDD0']}
+                      textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                      textStyle={{
+                        fontSize: columns === 1 ? 15 : 13,
+                        fontFamily: 'Outfit-Medium',
+                        textAlign: 'center',
+                        flexWrap: 'wrap',
+                        flexShrink: 1,
+                        marginLeft: columns === 1 ? 0 : 8,
+                      }}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <PrimaryButton title="Continue" onPress={handleNext} className="mb-3" />
         </View>
-      </Modal>
+      </ScrollView>
     </FormLayout>
   );
 }
