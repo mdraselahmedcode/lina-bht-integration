@@ -142,14 +142,16 @@
 //   );
 // }
 
+// app/(flow)/face-scan/loading-screen.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, Easing } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraIcon } from '@/components/icons';
+import { getFaceScanCaptures, deleteFaceScanCaptures } from '@/utils/storage';
 
 export default function FaceLoadingScreen() {
-  const { captures, scanType } = useLocalSearchParams();
+  const { sessionId, scanType } = useLocalSearchParams();
 
   const outerRingAnim = useRef(new Animated.Value(0)).current;
   const middleRingAnim = useRef(new Animated.Value(0)).current;
@@ -157,27 +159,56 @@ export default function FaceLoadingScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   console.log('🔵 LOADING SCREEN - Received params:', {
-    hasCaptures: !!captures,
+    hasSessionId: !!sessionId,
     scanType,
-    capturesLength: captures ? JSON.parse(captures as string).length : 0,
   });
 
   useEffect(() => {
     startLoadingAnimation();
 
-    const timer = setTimeout(() => {
-      console.log('🟡 Navigating to analysis-complete with captures');
-      router.replace({
-        pathname: '/(flow)/face-scan/analysis-complete',
-        params: {
-          captures: captures || '',
-          scanType: scanType || '',
-        },
-      });
-    }, 3000);
+    const loadAndNavigate = async () => {
+      try {
+        if (sessionId) {
+          const captures = await getFaceScanCaptures(sessionId as string);
 
-    return () => clearTimeout(timer);
-  }, []);
+          if (captures) {
+            console.log('✅ Captures metadata loaded:', captures.length);
+
+            const formattedCaptures = captures.map((capture) => ({
+              angle: capture.angle,
+              uri: capture.localPath,
+              timestamp: capture.timestamp,
+            }));
+
+            await deleteFaceScanCaptures(sessionId as string);
+
+            setTimeout(() => {
+              router.replace({
+                pathname: '/(flow)/face-scan/analysis-complete',
+                params: {
+                  captures: JSON.stringify(formattedCaptures),
+                  scanType: scanType || '',
+                },
+              });
+            }, 3000);
+          } else {
+            console.error('No captures found');
+            setTimeout(() => router.back(), 3000);
+          }
+        } else {
+          console.error('No sessionId provided');
+          setTimeout(() => router.back(), 3000);
+        }
+      } catch (error) {
+        console.error('Error loading captures:', error);
+        setTimeout(() => router.back(), 3000);
+      }
+    };
+
+    loadAndNavigate();
+
+    // No cleanup needed for animationTimer since it's not used
+  }, [sessionId]);
 
   const startLoadingAnimation = () => {
     Animated.timing(fadeAnim, {
@@ -245,7 +276,6 @@ export default function FaceLoadingScreen() {
               transform: [{ rotate: outerRotate }],
             }}
           />
-
           <Animated.View
             style={{
               position: 'absolute',
@@ -258,7 +288,6 @@ export default function FaceLoadingScreen() {
               transform: [{ rotate: middleRotate }],
             }}
           />
-
           <Animated.View
             style={{
               position: 'absolute',
@@ -271,7 +300,6 @@ export default function FaceLoadingScreen() {
               transform: [{ rotate: innerRotate }],
             }}
           />
-
           <View className="items-center justify-center">
             <CameraIcon size={30} color="#361A0D" />
           </View>

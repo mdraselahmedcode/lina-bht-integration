@@ -257,7 +257,6 @@ const AiAnalysisCompleteScreen = () => {
         setCaptures(parsed);
         console.log('✅ Parsed captures successfully:', parsed.length);
       } else {
-        // No captures found - this might be an error or just no data
         console.log('No captures found in params');
       }
     } catch (err) {
