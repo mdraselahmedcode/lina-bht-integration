@@ -1,12 +1,13 @@
 import { Stack } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import VectorBg from '@/components/VectorBg';
 
 export default function ForgotPasswordLayout() {
-  return (
-    <View style={styles.container}>
-      <VectorBg />
+  const insets = useSafeAreaInsets();
 
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -26,5 +27,6 @@ export default function ForgotPasswordLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent', // Fallback background color
   },
 });

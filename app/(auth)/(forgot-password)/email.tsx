@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import FormLayout from '@/components/layouts/FormLayout';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
@@ -14,40 +14,65 @@ import LoadingScreen from '@/components/loading/LoadingScreen';
 
 export default function EmailScreen() {
   const router = useRouter();
+  const [isSending, setIsSending] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const { fields, setFields } = ForgotPasswordFields();
 
-  const { isRendering, renderError, isContentReady } = useScreenReady({
-    dependencies: [fields],
+  const { isRendering, isContentReady, renderError } = useScreenReady({
+    dependencies: [],
     delay: 100,
+    initialReady: false,
   });
 
   const getField = (name: string) => fields.find((f) => f.name === name);
   const updateField = (name: string, value: string) =>
     setFields((prev) => prev.map((f) => (f.name === name ? { ...f, value, error: false } : f)));
 
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     const email = (getField('email')?.value as string) || '';
     if (!email.trim()) {
       showError('Please enter your email');
       return;
     }
 
-    router.push({
-      pathname: '/(auth)/(forgot-password)/verify-code',
-      params: { email },
-    });
+    setIsSending(true);
+    try {
+      // Simulate API call - replace with actual API
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      showSuccess('Verification code sent to your email');
+      router.push({
+        pathname: '/(auth)/(forgot-password)/verify-code',
+        params: { email },
+      });
+    } catch (error) {
+      showError('Failed to send verification code. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleRetry = () => {
     router.replace('/(auth)/(forgot-password)/email');
   };
 
-  // Show loading while screen is rendering
-  if (isRendering) {
-    <LoadingScreen />;
+  // Mark initial load as complete after first render
+  useEffect(() => {
+    if (isContentReady && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [isContentReady]);
+
+  // Show initial render loading (useScreenReady) - ONLY on first load
+  if (isRendering && isInitialLoad) {
+    return (
+      <FormLayout>
+        <LoadingScreen loadingText="Preparing give a sec..." backgroundColor="transparent" />
+      </FormLayout>
+    );
   }
 
   // Show error if rendering failed
@@ -74,7 +99,7 @@ export default function EmailScreen() {
           </Text>
         </View>
 
-        {/* ✅ Use your InputField properly */}
+        {/* Email Input Field */}
         <InputField
           placeHolder="Email Address"
           keyboard="email-address"
@@ -85,7 +110,13 @@ export default function EmailScreen() {
           style={{ marginBottom: 24 }}
         />
 
-        <PrimaryButton title="Send Code" onPress={handleSendCode} />
+        {/* Send Code Button */}
+        <PrimaryButton
+          title={isSending ? 'Sending...' : 'Send Code'}
+          onPress={handleSendCode}
+          disabled={isSending}
+          isLoading={isSending}
+        />
       </View>
     </FormLayout>
   );

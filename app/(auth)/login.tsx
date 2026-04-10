@@ -21,15 +21,17 @@ import ErrorScreen from '@/components/errors/ErrorScreen';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const router = useRouter();
   const { login } = useAuth();
   const { showError, showInfo } = useToast();
   const { validateLogin } = useFormValidation();
   const { fields, setFields } = LoginFields();
 
-  const { isRendering, renderError, isContentReady } = useScreenReady({
-    dependencies: [fields],
+  const { isRendering, isContentReady, renderError } = useScreenReady({
+    dependencies: [],
     delay: 100,
+    initialReady: false,
   });
 
   const getField = (name: string) => fields?.find((field) => field.name === name);
@@ -55,6 +57,7 @@ export default function LoginScreen() {
       await login('mock_token', { email: formData.email });
     } catch (error) {
       showError('Login failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -68,13 +71,23 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    // showInfo('Password reset feature coming soon!');
     router.push('/(auth)/(forgot-password)/email');
   };
 
-  // Show loading while screen is rendering
-  if (isRendering) {
-    <LoadingScreen />;
+  // Mark initial load as complete after first render
+  React.useEffect(() => {
+    if (isContentReady && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [isContentReady]);
+
+  // Show initial render loading (useScreenReady) - ONLY on first load
+  if (isRendering && isInitialLoad) {
+    return (
+      <FormLayout>
+        <LoadingScreen loadingText="Preparing login..." backgroundColor="transparent" />
+      </FormLayout>
+    );
   }
 
   // Show error if rendering failed
@@ -127,6 +140,7 @@ export default function LoginScreen() {
           onPress={handleLogin}
           className="mb-3"
           disabled={loading}
+          isLoading={loading}
         />
 
         {/* Forgot Password */}

@@ -12,12 +12,10 @@ import {
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import PrimaryButton from '@/components/buttons/PrimaryButton';
-import IconBadge from '@/components/icons/modified/IconBadge';
-import { ArrowRightIcon } from '@/components/icons';
-import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
+import OnboardingButton from '@/components/buttons/OnboardingButton';
 import OnboardingCard from '@/components/onboarding/OnboardingCard';
 import { ONBOARDING_DATA } from '@/constants/onboarding';
+
 const { height } = Dimensions.get('window');
 
 // Enable LayoutAnimation for Android
@@ -30,7 +28,6 @@ export default function OnboardingScreen1() {
   const router = useRouter();
 
   useEffect(() => {
-    // Small delay to ensure layout is measured
     const timer = setTimeout(() => {
       LayoutAnimation.configureNext({
         duration: 300,
@@ -78,14 +75,15 @@ export default function OnboardingScreen1() {
           ]}
           resizeMode="stretch"
         />
+
         {/* Header */}
-        <OnboardingHeader showBack={false} onSkip={handleSkip} />
+        {/* <OnboardingHeader showBack={false} onSkip={handleSkip} /> */}
 
         {/* Empty space for image area */}
         <View className="flex-1" />
 
         {/* Bottom Card Section */}
-        <SafeAreaView edges={['bottom']} className="px-container pb-4">
+        <SafeAreaView edges={['bottom']} className="gap-6 px-container pb-4">
           <OnboardingCard
             title={data.title}
             description={data.description}
@@ -93,11 +91,11 @@ export default function OnboardingScreen1() {
             totalScreens={ONBOARDING_DATA.length}
           />
 
-          <PrimaryButton
-            title={data.buttonText}
+          <OnboardingButton
+            title="Get Started"
             onPress={handleNext}
-            rightIcon={<IconBadge icon={<ArrowRightIcon size={24} color="#FFFFFF" />} />}
             style={{ marginVertical: 24 }}
+            height={64}
           />
         </SafeAreaView>
       </View>

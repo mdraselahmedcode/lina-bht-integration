@@ -241,7 +241,7 @@ export default function SkinHairConditionScreen() {
                       <RadioButton
                         value={isSelected}
                         onValueChange={() => setSelectedSkinType(option.value)}
-                        activeColor="#759A52"
+                        activeColor="#7A5D3E"
                         inactiveColor="#FFFFFF80"
                         size={34}
                         innerCircleSize={20}
@@ -295,7 +295,7 @@ export default function SkinHairConditionScreen() {
                         <RadioButton
                           value={isSelected}
                           onValueChange={() => toggleSkinConcern(option.value)}
-                          activeColor="#759A52"
+                          activeColor="#7A5D3E"
                           inactiveColor="#FFFFFF80"
                           size={34}
                           innerCircleSize={20}
@@ -346,7 +346,7 @@ export default function SkinHairConditionScreen() {
                       <RadioButton
                         value={isSelected}
                         onValueChange={() => setSelectedHairType(option.value)}
-                        activeColor="#759A52"
+                        activeColor="#7A5D3E"
                         inactiveColor="#FFFFFF80"
                         size={34}
                         innerCircleSize={20}
@@ -400,7 +400,7 @@ export default function SkinHairConditionScreen() {
                         <RadioButton
                           value={isSelected}
                           onValueChange={() => toggleHairConcern(option.value)}
-                          activeColor="#759A52"
+                          activeColor="#7A5D3E"
                           inactiveColor="#FFFFFF80"
                           size={34}
                           innerCircleSize={20}

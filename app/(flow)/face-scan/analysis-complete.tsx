@@ -1,7 +1,7 @@
-// // app/(flow)/face-scan/analysis-complete.tsx (Fixed scrolling)
-// import { ScrollView, StyleSheet, Text, View } from 'react-native';
-// import React from 'react';
+// import { ScrollView, StyleSheet, Text, View, Image } from 'react-native';
+// import React, { useState, useEffect } from 'react';
 // import { SafeAreaView } from 'react-native-safe-area-context';
+// import { useLocalSearchParams } from 'expo-router';
 // import CustomHeader from '@/components/header/CustomHeader';
 // import { LAYOUT } from '@/constants/constants';
 // import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
@@ -11,9 +11,29 @@
 // import PillowBadge from '@/components/buttons/PillowBadge';
 // import { SignInCuttedCircleIcon } from '@/components/icons';
 // import { useRouter } from 'expo-router';
+// import { AngleCapture } from '@/components/scans/MultiAngleCameraScan';
 
 // const AiAnalysisCompleteScreen = () => {
 //   const router = useRouter();
+//   const { captures: capturesParam } = useLocalSearchParams();
+//   const [captures, setCaptures] = useState<AngleCapture[]>([]);
+
+//   useEffect(() => {
+//     console.log('📊 ANALYSIS SCREEN - Received params:', {
+//       hasCaptures: !!capturesParam,
+//       capturesParam,
+//     });
+
+//     if (capturesParam) {
+//       try {
+//         const parsed = JSON.parse(capturesParam as string);
+//         setCaptures(parsed);
+//         console.log('✅ Parsed captures successfully:', parsed.length);
+//       } catch (error) {
+//         console.error('Error parsing captures:', error);
+//       }
+//     }
+//   }, [capturesParam]);
 
 //   return (
 //     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -43,6 +63,40 @@
 //               ingredients.
 //             </Text>
 //           </BorderlessShadowCard>
+
+//           {/* Captured Angles Preview */}
+//           {captures.length > 0 && (
+//             <View className="mt-3">
+//               <Text className="mb-2 text-start font-outfitMedium text-[16px] text-[#2E2117]">
+//                 Captured Angles
+//               </Text>
+//               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+//                 <View className="flex-row gap-2">
+//                   {captures.map((capture, idx) => (
+//                     <BorderlessShadowCard
+//                       key={idx}
+//                       b_tl={12}
+//                       b_tr={12}
+//                       b_bl={12}
+//                       b_br={12}
+//                       style={{
+//                         padding: 8,
+//                         width: 80,
+//                         alignItems: 'center',
+//                       }}>
+//                       <Image
+//                         source={{ uri: capture.uri }}
+//                         style={{ width: 60, height: 60, borderRadius: 30 }}
+//                       />
+//                       <Text className="mt-1 font-outfit text-[10px] capitalize text-[#2A2118]">
+//                         {capture.angle}
+//                       </Text>
+//                     </BorderlessShadowCard>
+//                   ))}
+//                 </View>
+//               </ScrollView>
+//             </View>
+//           )}
 
 //           {/* Detected Conditions Section */}
 //           <View className="mt-3">
@@ -152,7 +206,7 @@
 
 // const styles = StyleSheet.create({});
 
-import { ScrollView, StyleSheet, Text, View, Image } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Image, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -166,28 +220,108 @@ import PillowBadge from '@/components/buttons/PillowBadge';
 import { SignInCuttedCircleIcon } from '@/components/icons';
 import { useRouter } from 'expo-router';
 import { AngleCapture } from '@/components/scans/MultiAngleCameraScan';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
 
 const AiAnalysisCompleteScreen = () => {
   const router = useRouter();
   const { captures: capturesParam } = useLocalSearchParams();
   const [captures, setCaptures] = useState<AngleCapture[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { isRendering, isContentReady, renderError } = useScreenReady({
+    dependencies: [captures],
+    delay: 100,
+    initialReady: false,
+  });
 
   useEffect(() => {
-    console.log('📊 ANALYSIS SCREEN - Received params:', {
-      hasCaptures: !!capturesParam,
-      capturesParam,
-    });
+    loadCaptures();
+  }, [capturesParam]);
 
-    if (capturesParam) {
-      try {
+  const loadCaptures = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('📊 ANALYSIS SCREEN - Received params:', {
+        hasCaptures: !!capturesParam,
+        capturesParam,
+      });
+
+      if (capturesParam) {
         const parsed = JSON.parse(capturesParam as string);
         setCaptures(parsed);
         console.log('✅ Parsed captures successfully:', parsed.length);
-      } catch (error) {
-        console.error('Error parsing captures:', error);
+      } else {
+        // No captures found - this might be an error or just no data
+        console.log('No captures found in params');
       }
+    } catch (err) {
+      console.error('Error parsing captures:', err);
+      setError('Failed to load analysis data');
+    } finally {
+      setIsLoading(false);
     }
-  }, [capturesParam]);
+  };
+
+  const handleRetry = () => {
+    loadCaptures();
+  };
+
+  // Mark initial load as complete after first render
+  useEffect(() => {
+    if (isContentReady && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [isContentReady]);
+
+  // Show initial render loading (useScreenReady) - ONLY on first load
+  if (isRendering && isInitialLoad) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Preparing analysis results..." />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if rendering failed
+  if (renderError) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Analysis Complete" height={50} backButton />
+        <ErrorScreen message={renderError} onRetry={handleRetry} />
+      </SafeAreaView>
+    );
+  }
+
+  // Show loading while data is being processed
+  if (isLoading) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Analysis Complete" height={50} backButton />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#95B287" />
+          <Text className="mt-3 font-outfit text-[14px]" style={{ color: '#2E211799' }}>
+            Loading analysis results...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if data loading failed
+  if (error) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Analysis Complete" height={50} backButton />
+        <ErrorScreen message={error} onRetry={handleRetry} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -201,7 +335,12 @@ const AiAnalysisCompleteScreen = () => {
           flexGrow: 1,
         }}
         className="flex-1">
-        <View className="px-container">
+        <View
+          className="px-container"
+          style={{
+            opacity: isContentReady ? 1 : 0,
+            transform: [{ translateY: isContentReady ? 0 : 10 }],
+          }}>
           {/* Progress Card */}
           <BorderlessShadowCard
             style={{

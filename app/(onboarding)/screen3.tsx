@@ -12,12 +12,9 @@ import {
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import PrimaryButton from '@/components/buttons/PrimaryButton';
-import IconBadge from '@/components/icons/modified/IconBadge';
-import { ArrowRightIcon } from '@/components/icons';
-import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
 import OnboardingCard from '@/components/onboarding/OnboardingCard';
 import { ONBOARDING_DATA } from '@/constants/onboarding';
+import OnboardingButton from '@/components/buttons/OnboardingButton';
 const { height } = Dimensions.get('window');
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -80,7 +77,7 @@ export default function OnboardingScreen3() {
           resizeMode="stretch"
         />
 
-        <OnboardingHeader showBack={true} onBack={handleBack} onSkip={handleSkip} />
+        {/* <OnboardingHeader showBack={true} onBack={handleBack} onSkip={handleSkip} /> */}
 
         <View className="flex-1" />
 
@@ -92,11 +89,18 @@ export default function OnboardingScreen3() {
             totalScreens={ONBOARDING_DATA.length}
           />
 
-          <PrimaryButton
+          {/* <PrimaryButton
             title={data.buttonText}
             onPress={handleNext}
             rightIcon={<IconBadge icon={<ArrowRightIcon size={24} color="#FFFFFF" />} />}
             style={{ marginVertical: 24 }}
+          /> */}
+
+          <OnboardingButton
+            title={data.buttonText}
+            onPress={handleNext}
+            style={{ marginVertical: 24 }}
+            height={64}
           />
         </SafeAreaView>
       </View>

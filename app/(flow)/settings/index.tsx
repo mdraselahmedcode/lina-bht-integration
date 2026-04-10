@@ -66,7 +66,6 @@ const SettingsScreen = () => {
             style={{
               paddingVertical: 16,
               paddingHorizontal: 24,
-              marginTop: 8,
             }}>
             <View className="flex-row items-center">
               <View className="flex-1 flex-row items-center gap-3">

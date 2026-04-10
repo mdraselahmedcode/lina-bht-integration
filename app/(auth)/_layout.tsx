@@ -1,10 +1,14 @@
+// app/(auth)/_layout.tsx
 import { Stack } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import VectorBg from '@/components/VectorBg';
 
 export default function AuthLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* SVG Background */}
       <VectorBg />
 
@@ -14,14 +18,14 @@ export default function AuthLayout() {
           headerShown: false,
           animation: 'slide_from_right',
           contentStyle: {
-            backgroundColor: '#E8DDD0', // IMPORTANT
+            backgroundColor: 'transparent', // Change to transparent
           },
         }}>
         <Stack.Screen
           name="login"
           options={{
             animation: 'slide_from_right',
-            contentStyle: { backgroundColor: '#E8DDD0' },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
 
@@ -29,7 +33,7 @@ export default function AuthLayout() {
           name="signup"
           options={{
             animation: 'slide_from_right',
-            contentStyle: { backgroundColor: '#E8DDD0' },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
 
@@ -37,7 +41,7 @@ export default function AuthLayout() {
           name="(forgot-password)"
           options={{
             animation: 'slide_from_right',
-            contentStyle: { backgroundColor: '#E8DDD0' },
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
       </Stack>
@@ -48,5 +52,6 @@ export default function AuthLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#E8DDD0',
   },
 });

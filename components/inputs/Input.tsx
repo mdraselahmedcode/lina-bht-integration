@@ -51,7 +51,8 @@ export default function InputField({
   secureTextEntry = false,
   withShadow = true,
   height = 56,
-  gradientColors = ['#ede4d9', '#ede4d9', '#ede4d9'],
+  gradientColors = ['#ede4d9', '#ede4d9'],
+
   borderRadius, // New - optional
   borderTopLeftRadius, // New - optional
   borderTopRightRadius, // New - optional

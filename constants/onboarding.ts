@@ -26,14 +26,14 @@ export const ONBOARDING_DATA = [
     title: 'Get Your Personalized Routiner',
     description: 'Smart reminders and brightness control reduce eye strain.',
     backgroundImage: require('@/assets/images/onboarding/onboarding_2.jpg'),
-    buttonText: 'Continue',
+    buttonText: 'Next',
   },
   {
     id: '3',
     title: 'Product That Match Your Budget',
     description: 'See your screen time and get AI tips to stay balanced.',
     backgroundImage: require('@/assets/images/onboarding/onboarding_3.jpg'),
-    buttonText: 'Get Started',
+    buttonText: 'Continue',
   },
 ];
 

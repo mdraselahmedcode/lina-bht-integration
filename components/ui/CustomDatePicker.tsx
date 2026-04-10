@@ -7,6 +7,8 @@
 //   onChange: (date: Date) => void;
 //   maximumDate?: Date;
 //   minimumDate?: Date;
+//   label?: string; // Add label prop
+//   placeholder?: string; // Add placeholder for when no date is selected
 // }
 
 // export const DateOfBirthPicker: React.FC<DateOfBirthPickerProps> = ({
@@ -14,6 +16,8 @@
 //   onChange,
 //   maximumDate,
 //   minimumDate,
+//   label,
+//   placeholder = 'Not selected',
 // }) => {
 //   const [showPicker, setShowPicker] = useState(false);
 
@@ -72,7 +76,7 @@
 //   };
 
 //   const formatDate = (date: Date | null) => {
-//     if (!date) return 'Not selected';
+//     if (!date) return placeholder;
 //     return date.toLocaleDateString('en-US', {
 //       year: 'numeric',
 //       month: 'long',
@@ -84,10 +88,19 @@
 //     <>
 //       <TouchableOpacity
 //         onPress={() => setShowPicker(true)}
-//         className="flex-row items-center justify-between py-3">
-//         <Text className="font-outfit text-[16px]" style={{ color: '#2E2117' }}>
-//           {formatDate(value)}
-//         </Text>
+//         className="flex-row items-center justify-between ">
+//         <View className="flex-1">
+//           {label && (
+//             <Text className="font-outfit text-[12px]" style={{ color: '#2E211766' }}>
+//               {label}
+//             </Text>
+//           )}
+//           <Text
+//             className={`font-outfit text-[16px] ${label ? 'mt-1' : ''}`}
+//             style={{ color: '#2E2117' }}>
+//             {formatDate(value)}
+//           </Text>
+//         </View>
 //         <Ionicons name="calendar-outline" size={20} color="#361A0D" />
 //       </TouchableOpacity>
 
@@ -209,8 +222,8 @@ interface DateOfBirthPickerProps {
   onChange: (date: Date) => void;
   maximumDate?: Date;
   minimumDate?: Date;
-  label?: string; // Add label prop
-  placeholder?: string; // Add placeholder for when no date is selected
+  label?: string;
+  placeholder?: string;
 }
 
 export const DateOfBirthPicker: React.FC<DateOfBirthPickerProps> = ({
@@ -290,20 +303,23 @@ export const DateOfBirthPicker: React.FC<DateOfBirthPickerProps> = ({
     <>
       <TouchableOpacity
         onPress={() => setShowPicker(true)}
-        className="flex-row items-center justify-between ">
-        <View className="flex-1">
-          {label && (
-            <Text className="font-outfit text-[12px]" style={{ color: '#2E211766' }}>
-              {label}
+        activeOpacity={0.7}
+        style={{ paddingVertical: 12 }}>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-1">
+            {label && (
+              <Text className="font-outfit text-[12px]" style={{ color: '#2E211766' }}>
+                {label}
+              </Text>
+            )}
+            <Text
+              className={`font-outfit text-[16px] ${label ? 'mt-1' : ''}`}
+              style={{ color: '#2E2117' }}>
+              {formatDate(value)}
             </Text>
-          )}
-          <Text
-            className={`font-outfit text-[16px] ${label ? 'mt-1' : ''}`}
-            style={{ color: '#2E2117' }}>
-            {formatDate(value)}
-          </Text>
+          </View>
+          <Ionicons name="calendar-outline" size={20} color="#361A0D" />
         </View>
-        <Ionicons name="calendar-outline" size={20} color="#361A0D" />
       </TouchableOpacity>
 
       <Modal visible={showPicker} transparent animationType="slide" onRequestClose={handleCancel}>

@@ -20,8 +20,8 @@ const AuthTextBodySmall: React.FC<AuthTextBodySmallProps> = ({
     <Text
       numberOfLines={numberOfLines}
       // 3. Injected into the template literal
-      className={`font-primous text-[16px]  ${className}`}
-      style={[{ color: color || '#503939' }, style]}>
+      className={`font-outfit text-[16px]  ${className}`}
+      style={[{ color: color || '#6C524A' }, style]}>
       {text}
     </Text>
   );

@@ -13,7 +13,7 @@ const AuthFormTitle: React.FC<AuthFormTitleProps> = ({
   text,
   style,
   numberOfLines,
-  color,
+  color = '#361A0D',
   className = '',
 }) => {
   return (

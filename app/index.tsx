@@ -8,7 +8,7 @@ export default function RootIndex() {
   useEffect(() => {
     // Small delay to ensure navigation is ready
     const timer = setTimeout(() => {
-      router.replace('/(main)');
+      router.replace('/(onboarding)');
     }, 100);
 
     return () => clearTimeout(timer);
