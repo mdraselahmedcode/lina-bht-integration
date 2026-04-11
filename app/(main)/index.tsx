@@ -33,7 +33,11 @@ export default function HomeScreen() {
 
   // Loading state from API
   if (isLoading) {
-    return <LoadingScreen loadingText="Loading your dashboard..." />;
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Loading your dashboard..." />
+      </SafeAreaView>
+    );
   }
 
   // Error state from API

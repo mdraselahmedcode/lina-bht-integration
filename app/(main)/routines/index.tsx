@@ -180,7 +180,7 @@ const Routines = () => {
   // Show initial render loading (useScreenReady) - wrapped in SafeAreaView
   if (isRendering) {
     return (
-      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+      <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
         <LoadingScreen loadingText="Preparing your routine..." />
       </SafeAreaView>
     );
@@ -189,7 +189,7 @@ const Routines = () => {
   // Show error if rendering failed
   if (renderError) {
     return (
-      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+      <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
         <CustomHeader
           title="Your Routine"
           subtitle="Personalized based on your latest scan."
