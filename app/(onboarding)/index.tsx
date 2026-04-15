@@ -1,4 +1,4 @@
-// // app/(onboarding)/index.tsx (New main onboarding carousel)
+// // app/(onboarding)/index.tsx
 // import React, { useState, useRef } from 'react';
 // import {
 //   View,
@@ -7,6 +7,7 @@
 //   Dimensions,
 //   StyleSheet,
 //   TouchableOpacity,
+//   Platform,
 // } from 'react-native';
 // import { useRouter } from 'expo-router';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +17,17 @@
 // import { ONBOARDING_DATA } from '@/constants/onboarding';
 
 // const { width, height } = Dimensions.get('window');
+
+// // Calculate background height based on screen ratio
+// const getBackgroundHeight = () => {
+//   const screenRatio = height / width;
+//   // For taller screens (like iPhone 14 Pro Max), use slightly less height
+//   if (screenRatio > 2.0) {
+//     return height - 350;
+//   }
+//   // For standard screens
+//   return height - 400;
+// };
 
 // export default function OnboardingCarousel() {
 //   const [currentIndex, setCurrentIndex] = useState(0);
@@ -51,14 +63,20 @@
 
 //   const renderItem = ({ item, index }: { item: any; index: number }) => {
 //     const isLast = index === ONBOARDING_DATA.length - 1;
+//     const backgroundHeight = getBackgroundHeight();
 
 //     return (
 //       <View style={styles.slide}>
+//         {/* Background Image with improved props */}
 //         <ImageBackground
 //           source={item.backgroundImage}
-//           style={styles.backgroundImage}
-//           resizeMode="stretch"
-//         />
+//           style={[styles.backgroundImage, { height: backgroundHeight }]}
+//           resizeMode="cover" // Changed from "stretch" to "cover" for better quality
+//           fadeDuration={0} // Prevents fade-in flicker
+//         >
+//           {/* Optional: Add a subtle gradient overlay for better text readability */}
+//           <View style={styles.imageOverlay} />
+//         </ImageBackground>
 
 //         <View style={styles.overlay}>
 //           <View style={styles.spacer} />
@@ -96,8 +114,8 @@
 
 //   return (
 //     <View style={styles.container}>
-//       {/* Skip button */}
-//       <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
+//       {/* Skip button - improved positioning */}
+//       <TouchableOpacity onPress={handleSkip} style={styles.skipButton} activeOpacity={0.7}>
 //         <Text style={styles.skipText}>Skip</Text>
 //       </TouchableOpacity>
 
@@ -112,6 +130,10 @@
 //         onScroll={onScroll}
 //         scrollEventThrottle={16}
 //         bounces={false}
+//         decelerationRate="fast"
+//         removeClippedSubviews={Platform.OS === 'android'} // Better performance on Android
+//         maxToRenderPerBatch={3}
+//         windowSize={3}
 //       />
 //     </View>
 //   );
@@ -132,8 +154,11 @@
 //   backgroundImage: {
 //     position: 'absolute',
 //     width: width,
-//     height: height - 400,
 //     top: 0,
+//   },
+//   imageOverlay: {
+//     flex: 1,
+//     backgroundColor: 'rgba(0,0,0,0.1)', // Very subtle dark overlay for better text contrast
 //   },
 //   overlay: {
 //     flex: 1,
@@ -157,9 +182,21 @@
 //     paddingVertical: 8,
 //     backgroundColor: 'rgba(0,0,0,0.1)',
 //     borderRadius: 20,
+//     ...Platform.select({
+//       ios: {
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//       },
+//       android: {
+//         elevation: 2,
+//       },
+//     }),
 //   },
 //   skipText: {
-//     color: '#361A0D',
+//     // color: '#361A0D',
+//     color: '#FAFAFA',
 //     fontSize: 14,
 //     fontWeight: '500',
 //   },
@@ -169,30 +206,30 @@
 import React, { useState, useRef } from 'react';
 import {
   View,
-  ImageBackground,
+  Text,
   FlatList,
   Dimensions,
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import OnboardingButton from '@/components/buttons/OnboardingButton';
 import OnboardingCard from '@/components/onboarding/OnboardingCard';
-import { ONBOARDING_DATA } from '@/constants/onboarding';
+import { ONBOARDING_DATA, GRADIENT_CONFIG } from '@/constants/onboarding';
 
 const { width, height } = Dimensions.get('window');
 
 // Calculate background height based on screen ratio
 const getBackgroundHeight = () => {
   const screenRatio = height / width;
-  // For taller screens (like iPhone 14 Pro Max), use slightly less height
   if (screenRatio > 2.0) {
     return height - 350;
   }
-  // For standard screens
   return height - 400;
 };
 
@@ -200,6 +237,7 @@ export default function OnboardingCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
+  const scrollX = useRef(new Animated.Value(0)).current;
 
   const handleNext = () => {
     if (currentIndex < ONBOARDING_DATA.length - 1) {
@@ -223,7 +261,11 @@ export default function OnboardingCarousel() {
     router.replace('/(auth)/login');
   };
 
-  const onScroll = (event: any) => {
+  const onScroll = Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+    useNativeDriver: false,
+  });
+
+  const onMomentumScrollEnd = (event: any) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
     setCurrentIndex(index);
   };
@@ -232,48 +274,115 @@ export default function OnboardingCarousel() {
     const isLast = index === ONBOARDING_DATA.length - 1;
     const backgroundHeight = getBackgroundHeight();
 
+    const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+
+    // Background animations with cross-fade
+    const backgroundOpacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0, 1, 0],
+      extrapolate: 'clamp',
+    });
+
+    const backgroundScale = scrollX.interpolate({
+      inputRange,
+      outputRange: [1.3, 1, 1.3],
+      extrapolate: 'clamp',
+    });
+
+    // Content animations
+    const contentScale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.9, 1, 0.9],
+      extrapolate: 'clamp',
+    });
+
+    const contentTranslateY = scrollX.interpolate({
+      inputRange,
+      outputRange: [50, 0, 50],
+      extrapolate: 'clamp',
+    });
+
+    const contentOpacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [1, 1, 1],
+      extrapolate: 'clamp',
+    });
+
+    // 3D rotation - reduced for smoother effect
+    const rotateY = scrollX.interpolate({
+      inputRange,
+      outputRange: ['-35deg', '0deg', '35deg'],
+      extrapolate: 'clamp',
+    });
+
     return (
       <View style={styles.slide}>
-        {/* Background Image with improved props */}
-        <ImageBackground
-          source={item.backgroundImage}
-          style={[styles.backgroundImage, { height: backgroundHeight }]}
-          resizeMode="cover" // Changed from "stretch" to "cover" for better quality
-          fadeDuration={0} // Prevents fade-in flicker
-        >
-          {/* Optional: Add a subtle gradient overlay for better text readability */}
-          <View style={styles.imageOverlay} />
-        </ImageBackground>
+        {/* Background Image Container with clipping */}
+        <View style={[styles.backgroundContainer, { height: backgroundHeight }]}>
+          <Animated.Image
+            source={item.backgroundImage}
+            style={[
+              styles.backgroundImage,
+              {
+                opacity: backgroundOpacity,
+                transform: [{ scale: backgroundScale }],
+              },
+            ]}
+            resizeMode="cover"
+          />
+        </View>
+
+        {/* Gradient Overlay */}
+        <LinearGradient
+          colors={GRADIENT_CONFIG.colors}
+          locations={GRADIENT_CONFIG.locations}
+          start={GRADIENT_CONFIG.start}
+          end={GRADIENT_CONFIG.end}
+          style={styles.gradientOverlay}
+        />
 
         <View style={styles.overlay}>
           <View style={styles.spacer} />
 
-          <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
-            <OnboardingCard
-              title={item.title}
-              description={item.description}
-              currentIndex={index}
-              totalScreens={ONBOARDING_DATA.length}
-            />
-
-            {!isLast && (
-              <OnboardingButton
-                title="Continue"
-                onPress={handleNext}
-                style={styles.button}
-                height={64}
+          <Animated.View
+            style={[
+              styles.animatedContent,
+              {
+                opacity: contentOpacity,
+                transform: [
+                  { scale: contentScale },
+                  { translateY: contentTranslateY },
+                  { rotateY: rotateY },
+                ],
+              },
+            ]}>
+            <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
+              <OnboardingCard
+                title={item.title}
+                description={item.description}
+                currentIndex={index}
+                totalScreens={ONBOARDING_DATA.length}
               />
-            )}
 
-            {isLast && (
-              <OnboardingButton
-                title="Get Started"
-                onPress={handleComplete}
-                style={styles.button}
-                height={64}
-              />
-            )}
-          </SafeAreaView>
+              {!isLast && (
+                <OnboardingButton
+                  title="Continue"
+                  onPress={handleNext}
+                  style={styles.button}
+                  height={64}
+                />
+              )}
+
+              {isLast && (
+                <OnboardingButton
+                  title="Get Started"
+                  onPress={handleComplete}
+                  style={styles.button}
+                  height={64}
+                />
+              )}
+            </SafeAreaView>
+          </Animated.View>
         </View>
       </View>
     );
@@ -281,7 +390,6 @@ export default function OnboardingCarousel() {
 
   return (
     <View style={styles.container}>
-      {/* Skip button - improved positioning */}
       <TouchableOpacity onPress={handleSkip} style={styles.skipButton} activeOpacity={0.7}>
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
@@ -295,19 +403,17 @@ export default function OnboardingCarousel() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={onScroll}
+        onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={16}
         bounces={false}
         decelerationRate="fast"
-        removeClippedSubviews={Platform.OS === 'android'} // Better performance on Android
+        removeClippedSubviews={Platform.OS === 'android'}
         maxToRenderPerBatch={3}
         windowSize={3}
       />
     </View>
   );
 }
-
-// Add Text import
-import { Text } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -318,20 +424,32 @@ const styles = StyleSheet.create({
     width: width,
     flex: 1,
   },
-  backgroundImage: {
+  backgroundContainer: {
     position: 'absolute',
     width: width,
     top: 0,
+    overflow: 'hidden', // This prevents overlapping
   },
-  imageOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.1)', // Very subtle dark overlay for better text contrast
+  backgroundImage: {
+    width: width,
+    height: '100%',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: height * 0.6,
   },
   overlay: {
     flex: 1,
   },
   spacer: {
     flex: 1,
+  },
+  animatedContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   bottomContainer: {
     paddingHorizontal: 20,
@@ -362,7 +480,6 @@ const styles = StyleSheet.create({
     }),
   },
   skipText: {
-    // color: '#361A0D',
     color: '#FAFAFA',
     fontSize: 14,
     fontWeight: '500',

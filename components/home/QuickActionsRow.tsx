@@ -1,4 +1,4 @@
-// screens/home/components/QuickActionsRow.tsx (Simpler version)
+// screens/home/components/QuickActionsRow.tsx
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
@@ -6,8 +6,8 @@ import {
   ScanProductIcon,
   ScanSkinIcon,
   RoutineIcon,
-  AiAssistantIcon,
   ArticleIcon,
+  LymphaticMassageIcon,
 } from '@/components/icons';
 import { QuickAction } from '@/types/home';
 
@@ -25,8 +25,8 @@ const getQuickActionIcon = (iconName: string, size: number, color: string) => {
       return <ScanProductIcon size={size} color={color} />;
     case 'routine':
       return <RoutineIcon size={size} color={color} />;
-    case 'ai_assistant':
-      return <AiAssistantIcon size={size} color={color} />;
+    case 'lymphatic_massage':
+      return <LymphaticMassageIcon size={size} color={color} />;
     case 'article':
       return <ArticleIcon size={size} color={color} />;
     default:
@@ -54,8 +54,9 @@ const ActionButton: React.FC<{ action: QuickAction; onPress: () => void }> = ({
       case 'Routine':
       case 'My Routine':
         return 'My Routine';
-      case 'AI Assistant':
-        return 'AI Assistant';
+      case 'Lymphatic Massage':
+      case 'Lymphatic':
+        return 'Lymphatic Massage';
       default:
         return title;
     }
@@ -96,7 +97,9 @@ const ActionButton: React.FC<{ action: QuickAction; onPress: () => void }> = ({
           }}>
           {getQuickActionIcon(action.icon, 26, '#361A0D')}
         </BorderlessShadowCard>
-        <Text className="mt-3 font-outfitMedium text-[16px]">{getDisplayTitle(action.title)}</Text>
+        <Text className="mt-3 text-center font-outfitMedium text-[16px]">
+          {getDisplayTitle(action.title)}
+        </Text>
       </BorderlessShadowCard>
     </TouchableOpacity>
   );
@@ -154,11 +157,13 @@ export const QuickActionsRow: React.FC<QuickActionsRowProps> = ({
   onActionPress,
   articleAction,
 }) => {
-  const firstRow = actions.slice(0, 2);
-  const secondRow = actions.slice(2, 4);
+  // This creates 2 rows with 2 items each
+  const firstRow = actions.slice(0, 2); // Items 0 and 1: Face Scan, Product Scan
+  const secondRow = actions.slice(2, 4); // Items 2 and 3: My Routine, Lymphatic Massage
 
   return (
     <>
+      {/* Row 1 - First 2 items */}
       <View className="mt-4 flex-row gap-4">
         {firstRow.map((action) => (
           <ActionButton
@@ -169,17 +174,20 @@ export const QuickActionsRow: React.FC<QuickActionsRowProps> = ({
         ))}
       </View>
 
-      <View className="mt-4 flex-row gap-4">
-        {secondRow.map((action) => (
-          <ActionButton
-            key={action.id}
-            action={action}
-            onPress={() => onActionPress(action.title)}
-          />
-        ))}
-      </View>
+      {/* Row 2 - Next 2 items */}
+      {secondRow.length > 0 && (
+        <View className="mt-4 flex-row gap-4 text-center">
+          {secondRow.map((action) => (
+            <ActionButton
+              key={action.id}
+              action={action}
+              onPress={() => onActionPress(action.title)}
+            />
+          ))}
+        </View>
+      )}
 
-      {/* Article Button - Single row with rounded bottom corners */}
+      {/* Article Button */}
       <View className="mt-4">
         <ArticleButton
           action={articleAction || { id: 'article', title: 'Articles', icon: 'article' }}

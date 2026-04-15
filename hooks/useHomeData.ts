@@ -35,7 +35,8 @@ export const useHomeData = (): UseHomeDataReturn => {
     setIsError(false);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log('MOCK_QUICK_ACTIONS:', MOCK_HOME_DATA.quickActions); // Add this
       setData(MOCK_HOME_DATA);
     } catch (error) {
       console.error('Error loading home data:', error);
@@ -47,15 +48,15 @@ export const useHomeData = (): UseHomeDataReturn => {
 
   // Update routine step completion
   const updateRoutineStep = useCallback((stepId: string, completed: boolean) => {
-    setData(prevData => {
+    setData((prevData) => {
       if (!prevData) return prevData;
-      
-      const updatedSteps = prevData.morningRoutine.steps.map(step =>
+
+      const updatedSteps = prevData.morningRoutine.steps.map((step) =>
         step.id === stepId ? { ...step, completed } : step
       );
-      
-      const completedSteps = updatedSteps.filter(step => step.completed).length;
-      
+
+      const completedSteps = updatedSteps.filter((step) => step.completed).length;
+
       return {
         ...prevData,
         morningRoutine: {
@@ -69,7 +70,7 @@ export const useHomeData = (): UseHomeDataReturn => {
 
   // Update skin health score
   const updateSkinScore = useCallback((score: number) => {
-    setData(prevData => {
+    setData((prevData) => {
       if (!prevData) return prevData;
       return {
         ...prevData,
@@ -83,11 +84,11 @@ export const useHomeData = (): UseHomeDataReturn => {
 
   // Update individual metric
   const updateMetric = useCallback((metricId: string, value: string | number) => {
-    setData(prevData => {
+    setData((prevData) => {
       if (!prevData) return prevData;
       return {
         ...prevData,
-        metrics: prevData.metrics.map(metric =>
+        metrics: prevData.metrics.map((metric) =>
           metric.id === metricId ? { ...metric, value } : metric
         ),
       };

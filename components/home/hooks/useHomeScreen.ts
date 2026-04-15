@@ -35,6 +35,7 @@ export const useHomeScreen = () => {
     [updateRoutineStep]
   );
 
+  // screens/home/hooks/useHomeScreen.ts
   const handleQuickAction = useCallback(
     (actionTitle: string) => {
       console.log(`${actionTitle} pressed`);
@@ -56,13 +57,13 @@ export const useHomeScreen = () => {
         case 'My Routine':
           router.push('/(main)/routines');
           break;
-        case 'AI Assistant':
-          router.push('/(flow)/ai-assistant');
+        case 'Lymphatic Massage':
+        case 'Lymphatic':
+          router.push('/(flow)/lymphatic-massage');
           break;
         case 'Articles':
           router.push('/(flow)/learn-article');
           break;
-
         default:
           console.log(`Unknown action: ${actionTitle}`);
       }

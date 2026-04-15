@@ -49,7 +49,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { user, skinHealth, metrics, morningRoutine, insights, quickActions } = homeData;
+  const { user, metrics, morningRoutine, insights, quickActions } = homeData;
 
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -71,9 +71,15 @@ export default function HomeScreen() {
         style={{
           marginTop: LAYOUT.innerPage.marginTop,
         }}>
-        <SkinHealthCard
+        {/* <SkinHealthCard
           score={skinHealth.score}
           description={skinHealth.description}
+          metrics={metrics}
+        /> */}
+
+        <SkinHealthCard
+          faceScore={homeData.faceScore}
+          hairScore={homeData.hairScore}
           metrics={metrics}
         />
 
