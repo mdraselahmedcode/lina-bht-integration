@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View, Image, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
 import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
@@ -10,11 +10,19 @@ import CircularProgress from '@/components/home/CircularProgress';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
 import PillowBadge from '@/components/buttons/PillowBadge';
 import { SignInCuttedCircleIcon } from '@/components/icons';
-import { useRouter } from 'expo-router';
 import { AngleCapture } from '@/components/scans/MultiAngleCameraScan';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
+import AnalysingResultScoreCard from '@/components/scans/AnalysingResultScoreCard';
+
+const SKIN_STATS = [
+  { label: 'Hydration', value: '85', color: '#60A5FA' },
+  { label: 'Sebum', value: '60', color: '#4ADE80' },
+  { label: 'Redness', value: '38', color: '#FB7185' },
+  { label: 'Texture', value: '98', color: '#FBBF24' },
+  { label: 'Evenness', value: '52', color: '#A78BFA' },
+];
 
 const AiAnalysisCompleteScreen = () => {
   const router = useRouter();
@@ -132,8 +140,11 @@ const AiAnalysisCompleteScreen = () => {
             opacity: isContentReady ? 1 : 0,
             transform: [{ translateY: isContentReady ? 0 : 10 }],
           }}>
+          {/* NEW COMPONENT CALL */}
+          <AnalysingResultScoreCard stats={SKIN_STATS} />
+
           {/* Progress Card */}
-          <BorderlessShadowCard
+          {/* <BorderlessShadowCard
             style={{
               paddingVertical: 40,
               paddingHorizontal: 24,
@@ -146,7 +157,7 @@ const AiAnalysisCompleteScreen = () => {
               Your skin barrier is slightly compromised today. Focus on hydration and soothing
               ingredients.
             </Text>
-          </BorderlessShadowCard>
+          </BorderlessShadowCard> */}
 
           {/* Captured Angles Preview */}
           {captures.length > 0 && (
