@@ -172,8 +172,8 @@ const Profile = () => {
           <BorderlessShadowCard
             b_tl={0}
             b_tr={0}
-            b_bl={24}
-            b_br={24}
+            b_bl={0}
+            b_br={0}
             style={{ padding: 24, marginTop: 12 }}>
             <Text className="mb-5 font-outfitMedium text-[16px]" style={{ color: '#361A0D' }}>
               Skin & Hair Profile
@@ -199,28 +199,10 @@ const Profile = () => {
                 )}
               </View>
             ))}
-
-            {/* 3. PREMIUM SECTION */}
-            <View className="mt-8">
-              <Text className="font-outfitMedium text-[16px]" style={{ color: '#361A0D' }}>
-                Unlock Premium
-              </Text>
-              <Text className="mt-[6px] font-outfit text-[12px]" style={{ color: '#2A2118B2' }}>
-                Get advanced AI analysis, unlimited product scans, and priority support.
-              </Text>
-
-              <PrimaryButton
-                title="Upgrade"
-                height={48}
-                style={{ marginTop: 16 }}
-                textStyle={{ fontSize: 16 }}
-                onPress={() => router.push('/(flow)/profile/asking-upgrage-to-premium-screen')}
-              />
-            </View>
           </BorderlessShadowCard>
 
           {/* Premium Upgrade Card */}
-          {/* <BorderlessShadowCard
+          <BorderlessShadowCard
             b_tl={0}
             b_tr={0}
             b_bl={24}
@@ -245,7 +227,7 @@ const Profile = () => {
                 router.push('/(flow)/profile/asking-upgrage-to-premium-screen');
               }}
             />
-          </BorderlessShadowCard> */}
+          </BorderlessShadowCard>
 
           {/* Features Section */}
           <View className="mt-3">

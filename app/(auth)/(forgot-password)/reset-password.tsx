@@ -116,7 +116,7 @@ export default function ResetPasswordScreen() {
         }}>
         <View className="mb-10">
           <AuthFormTitle text="Set New Password" />
-          <Text className="text-center font-outfit text-[14px] text-titleTextColor">
+          <Text className="text-center font-outfit text-[14px] text-titleTextColor/60 ">
             Create a new password for your account
           </Text>
         </View>

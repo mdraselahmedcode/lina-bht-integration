@@ -31,7 +31,7 @@ const HAIR_TYPE_LABELS: Record<string, string> = {
   coily_or_kinky: 'Coily or Kinky',
 };
 
-// Skin concerns mapping for display
+// Skin concerns mapping for display (including custom)
 const SKIN_CONCERNS_LABELS: Record<string, string> = {
   acne_pimple: 'Acne, Pimple',
   irritation_redness: 'Irritation, redness',
@@ -39,7 +39,7 @@ const SKIN_CONCERNS_LABELS: Record<string, string> = {
   dullness: 'Dullness',
 };
 
-// Hair concerns mapping for display
+// Hair concerns mapping for display (including custom)
 const HAIR_CONCERNS_LABELS: Record<string, string> = {
   hair_fall: 'Hair fall',
   dandruff: 'Dandruff',
@@ -52,8 +52,10 @@ export default function SkinHairConditionSettingsScreen() {
 
   const [skinType, setSkinType] = useState<string | null>(null);
   const [skinConcerns, setSkinConcerns] = useState<string[]>([]);
+  const [skinCustomConcerns, setSkinCustomConcerns] = useState<string[]>([]);
   const [hairType, setHairType] = useState<string | null>(null);
   const [hairConcerns, setHairConcerns] = useState<string[]>([]);
+  const [hairCustomConcerns, setHairCustomConcerns] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
@@ -68,18 +70,28 @@ export default function SkinHairConditionSettingsScreen() {
 
   const loadData = async () => {
     try {
-      const [savedSkinType, savedSkinConcerns, savedHairType, savedHairConcerns] =
-        await Promise.all([
-          AsyncStorage.getItem('user_skin_type'),
-          AsyncStorage.getItem('user_skin_concerns'),
-          AsyncStorage.getItem('user_hair_type'),
-          AsyncStorage.getItem('user_hair_concerns'),
-        ]);
+      const [
+        savedSkinType,
+        savedSkinConcerns,
+        savedSkinCustom,
+        savedHairType,
+        savedHairConcerns,
+        savedHairCustom,
+      ] = await Promise.all([
+        AsyncStorage.getItem('user_skin_type'),
+        AsyncStorage.getItem('user_skin_concerns'),
+        AsyncStorage.getItem('user_skin_custom_concerns'),
+        AsyncStorage.getItem('user_hair_type'),
+        AsyncStorage.getItem('user_hair_concerns'),
+        AsyncStorage.getItem('user_hair_custom_concerns'),
+      ]);
 
       if (savedSkinType) setSkinType(savedSkinType);
       if (savedSkinConcerns) setSkinConcerns(JSON.parse(savedSkinConcerns));
+      if (savedSkinCustom) setSkinCustomConcerns(JSON.parse(savedSkinCustom));
       if (savedHairType) setHairType(savedHairType);
       if (savedHairConcerns) setHairConcerns(JSON.parse(savedHairConcerns));
+      if (savedHairCustom) setHairCustomConcerns(JSON.parse(savedHairCustom));
     } catch (error) {
       console.error('Error loading skin/hair data:', error);
     } finally {
@@ -96,15 +108,17 @@ export default function SkinHairConditionSettingsScreen() {
   };
 
   const getSkinConcernsDisplay = () => {
-    if (skinConcerns.length === 0) return 'None';
-    const labels = skinConcerns.map((c) => SKIN_CONCERNS_LABELS[c] || c);
+    const allConcerns = [...skinConcerns, ...skinCustomConcerns];
+    if (allConcerns.length === 0) return 'None';
+    const labels = allConcerns.map((c) => SKIN_CONCERNS_LABELS[c] || c);
     if (labels.length <= 3) return labels.join(', ');
     return `${labels.slice(0, 3).join(', ')} +${labels.length - 3} more`;
   };
 
   const getHairConcernsDisplay = () => {
-    if (hairConcerns.length === 0) return 'None';
-    const labels = hairConcerns.map((c) => HAIR_CONCERNS_LABELS[c] || c);
+    const allConcerns = [...hairConcerns, ...hairCustomConcerns];
+    if (allConcerns.length === 0) return 'None';
+    const labels = allConcerns.map((c) => HAIR_CONCERNS_LABELS[c] || c);
     if (labels.length <= 3) return labels.join(', ');
     return `${labels.slice(0, 3).join(', ')} +${labels.length - 3} more`;
   };
@@ -153,7 +167,6 @@ export default function SkinHairConditionSettingsScreen() {
             transform: [{ translateY: isContentReady ? 0 : 10 }],
           }}>
           {/* Skin Section */}
-
           <BorderlessShadowCard
             b_tl={24}
             b_tr={24}
@@ -223,7 +236,7 @@ export default function SkinHairConditionSettingsScreen() {
             borderBottomLeftRadius={24}
             borderBottomRightRadius={24}
             title="Edit Skin & Hair"
-            style={{ marginTop: 24 }}
+            style={{ marginTop: 16 }}
           />
         </View>
       </ScrollView>

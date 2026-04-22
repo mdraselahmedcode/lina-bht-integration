@@ -154,7 +154,7 @@ export default function PersonalInfoScreen() {
 
   // Show loading while screen is rendering
   if (isRendering) {
-    return <LoadingScreen loadingText="Set up your inviorment" />;
+    return <LoadingScreen loadingText="Initializing your profile..." transparent={true} />;
   }
 
   // Show error if rendering failed

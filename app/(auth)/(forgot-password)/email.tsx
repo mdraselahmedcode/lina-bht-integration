@@ -93,8 +93,8 @@ export default function EmailScreen() {
           transform: [{ translateY: isContentReady ? 0 : 10 }],
         }}>
         <View className="mb-10">
-          <AuthFormTitle text="Let’s Get You Back In" />
-          <Text className="text-center font-outfit text-[14px] text-titleTextColor">
+          <AuthFormTitle text="Let’s Get You Back In" style={{ fontSize: 26 }} />
+          <Text className=" mt-2 text-center font-outfit text-[14px] text-titleTextColor/60">
             Enter your email to receive a verification code
           </Text>
         </View>

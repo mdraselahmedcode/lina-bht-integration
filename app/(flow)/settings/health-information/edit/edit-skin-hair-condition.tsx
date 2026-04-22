@@ -1,6 +1,15 @@
-// app/(flow)/settings/health-information/edit-skin-hair-condition.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
+// app/(flow)/settings/health-information/edit/edit-skin-hair-condition.tsx
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  useWindowDimensions,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +21,8 @@ import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
 import { RadioButton } from '@/components/buttons/RadioButton';
+import { CheckIconButton } from '@/components/CheckIconButton';
+import InputField from '@/components/inputs/Input';
 import {
   CoilyOrKinkyHairIcon,
   CombinationSkinIcon,
@@ -68,12 +79,13 @@ const SKIN_TYPE = [
   },
 ];
 
-// ==================== SKIN CONCERNS ====================
+// ==================== SKIN CONCERNS (with Other option) ====================
 const SKIN_CONCERNS_OPTIONS = [
   { id: 'acne', label: 'Acne, Pimple', value: 'acne_pimple' },
   { id: 'irritation', label: 'Irritation, redness', value: 'irritation_redness' },
   { id: 'pigmentation', label: 'Pigmentation', value: 'pigmentation' },
   { id: 'dullness', label: 'Dullness', value: 'dullness' },
+  { id: 'skin_other', label: 'Other', value: 'skin_other' },
 ];
 
 // ==================== HAIR TYPE (with icons) ====================
@@ -112,12 +124,13 @@ const HAIR_TYPE = [
   },
 ];
 
-// ==================== HAIR CONCERNS ====================
+// ==================== HAIR CONCERNS (with Other option) ====================
 const HAIR_CONCERNS_OPTIONS = [
   { id: 'hair_fall', label: 'Hair fall', value: 'hair_fall' },
   { id: 'dandruff', label: 'Dandruff', value: 'dandruff' },
   { id: 'oily_scalp', label: 'Oily Scalp', value: 'oily_scalp' },
   { id: 'dry_scalp', label: 'Dry Scalp', value: 'dry_scalp' },
+  { id: 'hair_other', label: 'Other', value: 'hair_other' },
 ];
 
 export default function EditSkinHairConditionScreen() {
@@ -129,8 +142,26 @@ export default function EditSkinHairConditionScreen() {
   const [selectedSkinConcerns, setSelectedSkinConcerns] = useState<string[]>([]);
   const [selectedHairType, setSelectedHairType] = useState<string | null>(null);
   const [selectedHairConcerns, setSelectedHairConcerns] = useState<string[]>([]);
+
+  // Custom concerns states
+  const [showSkinCustomInput, setShowSkinCustomInput] = useState(false);
+  const [skinCustomConcern, setSkinCustomConcern] = useState('');
+  const [skinCustomConcernsList, setSkinCustomConcernsList] = useState<string[]>([]);
+
+  const [showHairCustomInput, setShowHairCustomInput] = useState(false);
+  const [hairCustomConcern, setHairCustomConcern] = useState('');
+  const [hairCustomConcernsList, setHairCustomConcernsList] = useState<string[]>([]);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Animation values
+  const skinFadeAnim = React.useRef(new Animated.Value(0)).current;
+  const skinSlideAnim = React.useRef(new Animated.Value(20)).current;
+  const hairFadeAnim = React.useRef(new Animated.Value(0)).current;
+  const hairSlideAnim = React.useRef(new Animated.Value(20)).current;
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
@@ -138,24 +169,78 @@ export default function EditSkinHairConditionScreen() {
     initialReady: false,
   });
 
+  React.useEffect(() => {
+    if (showSkinCustomInput) {
+      Animated.parallel([
+        Animated.timing(skinFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(skinSlideAnim, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      skinFadeAnim.setValue(0);
+      skinSlideAnim.setValue(20);
+    }
+  }, [showSkinCustomInput]);
+
+  React.useEffect(() => {
+    if (showHairCustomInput) {
+      Animated.parallel([
+        Animated.timing(hairFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(hairSlideAnim, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      hairFadeAnim.setValue(0);
+      hairSlideAnim.setValue(20);
+    }
+  }, [showHairCustomInput]);
+
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      const [savedSkinType, savedSkinConcerns, savedHairType, savedHairConcerns] =
-        await Promise.all([
-          AsyncStorage.getItem('user_skin_type'),
-          AsyncStorage.getItem('user_skin_concerns'),
-          AsyncStorage.getItem('user_hair_type'),
-          AsyncStorage.getItem('user_hair_concerns'),
-        ]);
+      const [
+        savedSkinType,
+        savedSkinConcerns,
+        savedSkinCustom,
+        savedHairType,
+        savedHairConcerns,
+        savedHairCustom,
+      ] = await Promise.all([
+        AsyncStorage.getItem('user_skin_type'),
+        AsyncStorage.getItem('user_skin_concerns'),
+        AsyncStorage.getItem('user_skin_custom_concerns'),
+        AsyncStorage.getItem('user_hair_type'),
+        AsyncStorage.getItem('user_hair_concerns'),
+        AsyncStorage.getItem('user_hair_custom_concerns'),
+      ]);
 
       if (savedSkinType) setSelectedSkinType(savedSkinType);
       if (savedSkinConcerns) setSelectedSkinConcerns(JSON.parse(savedSkinConcerns));
+      if (savedSkinCustom) setSkinCustomConcernsList(JSON.parse(savedSkinCustom));
       if (savedHairType) setSelectedHairType(savedHairType);
       if (savedHairConcerns) setSelectedHairConcerns(JSON.parse(savedHairConcerns));
+      if (savedHairCustom) setHairCustomConcernsList(JSON.parse(savedHairCustom));
     } catch (error) {
       console.error('Error loading skin/hair data:', error);
     } finally {
@@ -164,18 +249,32 @@ export default function EditSkinHairConditionScreen() {
   };
 
   const toggleSkinConcern = (concernValue: string) => {
-    if (selectedSkinConcerns.includes(concernValue)) {
-      setSelectedSkinConcerns(selectedSkinConcerns.filter((item) => item !== concernValue));
+    if (concernValue === 'skin_other') {
+      setShowSkinCustomInput(!showSkinCustomInput);
+      if (!showSkinCustomInput) {
+        setSkinCustomConcern('');
+      }
     } else {
-      setSelectedSkinConcerns([...selectedSkinConcerns, concernValue]);
+      if (selectedSkinConcerns.includes(concernValue)) {
+        setSelectedSkinConcerns(selectedSkinConcerns.filter((item) => item !== concernValue));
+      } else {
+        setSelectedSkinConcerns([...selectedSkinConcerns, concernValue]);
+      }
     }
   };
 
   const toggleHairConcern = (concernValue: string) => {
-    if (selectedHairConcerns.includes(concernValue)) {
-      setSelectedHairConcerns(selectedHairConcerns.filter((item) => item !== concernValue));
+    if (concernValue === 'hair_other') {
+      setShowHairCustomInput(!showHairCustomInput);
+      if (!showHairCustomInput) {
+        setHairCustomConcern('');
+      }
     } else {
-      setSelectedHairConcerns([...selectedHairConcerns, concernValue]);
+      if (selectedHairConcerns.includes(concernValue)) {
+        setSelectedHairConcerns(selectedHairConcerns.filter((item) => item !== concernValue));
+      } else {
+        setSelectedHairConcerns([...selectedHairConcerns, concernValue]);
+      }
     }
   };
 
@@ -190,13 +289,39 @@ export default function EditSkinHairConditionScreen() {
       return;
     }
 
+    // Process skin concerns
+    let finalSkinConcerns = [...selectedSkinConcerns];
+    let finalSkinCustomList = [...skinCustomConcernsList];
+
+    if (showSkinCustomInput && skinCustomConcern.trim()) {
+      const newConcern = skinCustomConcern.trim();
+      if (!finalSkinConcerns.includes(newConcern)) {
+        finalSkinConcerns.push(newConcern);
+        finalSkinCustomList.push(newConcern);
+      }
+    }
+
+    // Process hair concerns
+    let finalHairConcerns = [...selectedHairConcerns];
+    let finalHairCustomList = [...hairCustomConcernsList];
+
+    if (showHairCustomInput && hairCustomConcern.trim()) {
+      const newConcern = hairCustomConcern.trim();
+      if (!finalHairConcerns.includes(newConcern)) {
+        finalHairConcerns.push(newConcern);
+        finalHairCustomList.push(newConcern);
+      }
+    }
+
     setIsSaving(true);
     try {
       await Promise.all([
         AsyncStorage.setItem('user_skin_type', selectedSkinType),
-        AsyncStorage.setItem('user_skin_concerns', JSON.stringify(selectedSkinConcerns)),
+        AsyncStorage.setItem('user_skin_concerns', JSON.stringify(finalSkinConcerns)),
+        AsyncStorage.setItem('user_skin_custom_concerns', JSON.stringify(finalSkinCustomList)),
         AsyncStorage.setItem('user_hair_type', selectedHairType),
-        AsyncStorage.setItem('user_hair_concerns', JSON.stringify(selectedHairConcerns)),
+        AsyncStorage.setItem('user_hair_concerns', JSON.stringify(finalHairConcerns)),
+        AsyncStorage.setItem('user_hair_custom_concerns', JSON.stringify(finalHairCustomList)),
       ]);
       showSuccess('Skin & hair information updated successfully');
       router.back();
@@ -220,6 +345,27 @@ export default function EditSkinHairConditionScreen() {
 
   const columns = getColumnsCount();
 
+  // Combine predefined options with custom concerns
+  const allSkinConcerns = [
+    ...SKIN_CONCERNS_OPTIONS.filter((opt) => opt.value !== 'skin_other'),
+    ...skinCustomConcernsList.map((concern, index) => ({
+      id: `skin_custom_${index}`,
+      label: concern,
+      value: concern,
+    })),
+    { id: 'skin_other', label: 'Other', value: 'skin_other' },
+  ];
+
+  const allHairConcerns = [
+    ...HAIR_CONCERNS_OPTIONS.filter((opt) => opt.value !== 'hair_other'),
+    ...hairCustomConcernsList.map((concern, index) => ({
+      id: `hair_custom_${index}`,
+      label: concern,
+      value: concern,
+    })),
+    { id: 'hair_other', label: 'Other', value: 'hair_other' },
+  ];
+
   if (isRendering || isLoading) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -241,86 +387,50 @@ export default function EditSkinHairConditionScreen() {
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader title="Edit Skin & Hair" height={50} backButton={true} />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: LAYOUT.screen.scrollViewPaddingBottom,
-          paddingTop: 24,
-          flexGrow: 1,
-        }}
-        className="flex-1">
-        <View
-          className="px-container"
-          style={{
-            opacity: isContentReady ? 1 : 0,
-            transform: [{ translateY: isContentReady ? 0 : 10 }],
-          }}>
-          {/* ==================== SKIN SECTION ==================== */}
-          <Text className="mb-3 font-outfitMedium text-[18px]" style={{ color: '#2E2117' }}>
-            Skin
-          </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+        <ScrollView
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: LAYOUT.screen.scrollViewPaddingBottom + 40,
+            paddingTop: 24,
+            flexGrow: 1,
+          }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}>
+          <View
+            className="px-container"
+            style={{
+              opacity: isContentReady ? 1 : 0,
+              transform: [{ translateY: isContentReady ? 0 : 10 }],
+            }}>
+            {/* ==================== SKIN SECTION ==================== */}
+            <Text className="mb-3 font-outfitMedium text-[18px]" style={{ color: '#2E2117' }}>
+              Skin
+            </Text>
 
-          {/* Skin Type */}
-          <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">Skin Type</Text>
-          <View className="mb-6 gap-3">
-            {SKIN_TYPE.map((option) => {
-              const isSelected = selectedSkinType === option.value;
-              const activeColor = '#759A52';
-              const inactiveColor = '#361A0D';
-              const iconColor = isSelected ? activeColor : inactiveColor;
+            {/* Skin Type */}
+            <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">Skin Type</Text>
+            <View className="mb-6 gap-3">
+              {SKIN_TYPE.map((option) => {
+                const isSelected = selectedSkinType === option.value;
+                const activeColor = '#759A52';
+                const inactiveColor = '#361A0D';
+                const iconColor = isSelected ? activeColor : inactiveColor;
 
-              return (
-                <PrimaryButton
-                  key={option.id}
-                  title={option.label}
-                  onPress={() => setSelectedSkinType(option.value)}
-                  leftIcon={option.leftIcon(iconColor)}
-                  rightIcon={
-                    <RadioButton
-                      value={isSelected}
-                      onValueChange={() => setSelectedSkinType(option.value)}
-                      activeColor="#759A52"
-                      inactiveColor="#FFFFFF80"
-                      size={34}
-                      innerCircleSize={20}
-                    />
-                  }
-                  height={56}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                    width: '100%',
-                    textAlign: 'left',
-                    marginLeft: 40,
-                  }}
-                />
-              );
-            })}
-          </View>
-
-          {/* Skin Concerns */}
-          <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">
-            Skin Concerns (Select all that apply)
-          </Text>
-          <View className="mb-8 flex-row flex-wrap justify-between">
-            {SKIN_CONCERNS_OPTIONS.map((option) => {
-              const isSelected = selectedSkinConcerns.includes(option.value);
-              return (
-                <View
-                  key={option.id}
-                  style={{
-                    width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
-                    marginBottom: 12,
-                  }}>
+                return (
                   <PrimaryButton
+                    key={option.id}
                     title={option.label}
-                    onPress={() => toggleSkinConcern(option.value)}
-                    leftIcon={
+                    onPress={() => setSelectedSkinType(option.value)}
+                    leftIcon={option.leftIcon(iconColor)}
+                    rightIcon={
                       <RadioButton
                         value={isSelected}
-                        onValueChange={() => toggleSkinConcern(option.value)}
+                        onValueChange={() => setSelectedSkinType(option.value)}
                         activeColor="#759A52"
                         inactiveColor="#FFFFFF80"
                         size={34}
@@ -328,89 +438,152 @@ export default function EditSkinHairConditionScreen() {
                       />
                     }
                     height={56}
-                    withShadow={true}
                     gradientColors={['#e2d2c1', '#e2d2c1']}
                     textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
                     textStyle={{
-                      fontSize: columns === 1 ? 15 : 13,
-                      fontFamily: 'Outfit-Medium',
-                      textAlign: 'center',
-                      flexWrap: 'wrap',
-                      flexShrink: 1,
-                      marginLeft: columns === 1 ? 0 : 8,
+                      fontSize: 14,
+                      fontFamily: 'Outfit-Regular',
+                      width: '100%',
+                      textAlign: 'left',
+                      marginLeft: 40,
                     }}
                   />
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
 
-          {/* ==================== HAIR SECTION ==================== */}
-          <Text className="mb-3 font-outfitMedium text-[18px]" style={{ color: '#2E2117' }}>
-            Hair
-          </Text>
+            {/* Skin Concerns */}
+            <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">
+              Skin Concerns (Select all that apply)
+            </Text>
+            <View className="mb-0 flex-row flex-wrap justify-between">
+              {allSkinConcerns.map((option) => {
+                const isSelected = selectedSkinConcerns.includes(option.value);
+                const isOther = option.value === 'skin_other';
 
-          {/* Hair Type */}
-          <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">Hair Type</Text>
-          <View className="mb-6 gap-3">
-            {HAIR_TYPE.map((option) => {
-              const isSelected = selectedHairType === option.value;
-              const activeColor = '#759A52';
-              const inactiveColor = '#361A0D';
-              const iconColor = isSelected ? activeColor : inactiveColor;
+                if (isOther) {
+                  return (
+                    <View
+                      key={option.id}
+                      style={{
+                        width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
+                        marginBottom: 12,
+                      }}>
+                      <PrimaryButton
+                        title={option.label}
+                        onPress={() => toggleSkinConcern(option.value)}
+                        leftIcon={
+                          <CheckIconButton
+                            value={showSkinCustomInput}
+                            onValueChange={() => toggleSkinConcern(option.value)}
+                            activeColor="#759A52"
+                            inactiveColor="#361A0D"
+                            size={24}
+                          />
+                        }
+                        height={56}
+                        withShadow={true}
+                        gradientColors={['#E8DDD0', '#E8DDD0']}
+                        textClassName={showSkinCustomInput ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                        textStyle={{
+                          fontSize: columns === 1 ? 15 : 13,
+                          fontFamily: 'Outfit-Medium',
+                          textAlign: 'center',
+                          flexWrap: 'wrap',
+                          flexShrink: 1,
+                          marginLeft: columns === 1 ? 0 : 8,
+                        }}
+                      />
+                    </View>
+                  );
+                }
 
-              return (
-                <PrimaryButton
-                  key={option.id}
-                  title={option.label}
-                  onPress={() => setSelectedHairType(option.value)}
-                  leftIcon={option.leftIcon(iconColor)}
-                  rightIcon={
-                    <RadioButton
-                      value={isSelected}
-                      onValueChange={() => setSelectedHairType(option.value)}
-                      activeColor="#759A52"
-                      inactiveColor="#FFFFFF80"
-                      size={34}
-                      innerCircleSize={20}
+                return (
+                  <View
+                    key={option.id}
+                    style={{
+                      width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
+                      marginBottom: 12,
+                    }}>
+                    <PrimaryButton
+                      title={option.label}
+                      onPress={() => toggleSkinConcern(option.value)}
+                      leftIcon={
+                        <CheckIconButton
+                          value={isSelected}
+                          onValueChange={() => toggleSkinConcern(option.value)}
+                          activeColor="#759A52"
+                          inactiveColor="#361A0D"
+                          size={24}
+                        />
+                      }
+                      height={56}
+                      withShadow={true}
+                      gradientColors={['#E8DDD0', '#E8DDD0']}
+                      textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                      textStyle={{
+                        fontSize: columns === 1 ? 15 : 13,
+                        fontFamily: 'Outfit-Medium',
+                        textAlign: 'center',
+                        flexWrap: 'wrap',
+                        flexShrink: 1,
+                        marginLeft: columns === 1 ? 0 : 8,
+                      }}
                     />
-                  }
-                  height={56}
-                  gradientColors={['#e2d2c1', '#e2d2c1']}
-                  textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
-                  textStyle={{
-                    fontSize: 14,
-                    fontFamily: 'Outfit-Regular',
-                    width: '100%',
-                    textAlign: 'left',
-                    marginLeft: 40,
-                  }}
-                />
-              );
-            })}
-          </View>
+                  </View>
+                );
+              })}
+            </View>
 
-          {/* Hair Concerns */}
-          <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">
-            Hair Concerns (Select all that apply)
-          </Text>
-          <View className="mb-8 flex-row flex-wrap justify-between">
-            {HAIR_CONCERNS_OPTIONS.map((option) => {
-              const isSelected = selectedHairConcerns.includes(option.value);
-              return (
-                <View
-                  key={option.id}
-                  style={{
-                    width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
-                    marginBottom: 12,
-                  }}>
+            {/* Skin Custom Input Section */}
+            {showSkinCustomInput && (
+              <Animated.View
+                style={{
+                  marginTop: 16,
+                  marginBottom: 16,
+                  opacity: skinFadeAnim,
+                  transform: [{ translateY: skinSlideAnim }],
+                }}>
+                <InputField
+                  value={skinCustomConcern}
+                  handler={(_, val) => setSkinCustomConcern(val)}
+                  placeHolder="Enter your skin concern (e.g., Rosacea, Eczema, etc.)"
+                  showLabel={false}
+                  height={56}
+                  withShadow={true}
+                  borderRadius={100}
+                  inputStyle={{ fontSize: 13 }}
+                  animated={true}
+                  animationDuration={200}
+                  initialOpacity={0}
+                />
+              </Animated.View>
+            )}
+
+            {/* ==================== HAIR SECTION ==================== */}
+            <Text className="mb-3 mt-4 font-outfitMedium text-[18px]" style={{ color: '#2E2117' }}>
+              Hair
+            </Text>
+
+            {/* Hair Type */}
+            <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">Hair Type</Text>
+            <View className="mb-6 gap-3">
+              {HAIR_TYPE.map((option) => {
+                const isSelected = selectedHairType === option.value;
+                const activeColor = '#759A52';
+                const inactiveColor = '#361A0D';
+                const iconColor = isSelected ? activeColor : inactiveColor;
+
+                return (
                   <PrimaryButton
+                    key={option.id}
                     title={option.label}
-                    onPress={() => toggleHairConcern(option.value)}
-                    leftIcon={
+                    onPress={() => setSelectedHairType(option.value)}
+                    leftIcon={option.leftIcon(iconColor)}
+                    rightIcon={
                       <RadioButton
                         value={isSelected}
-                        onValueChange={() => toggleHairConcern(option.value)}
+                        onValueChange={() => setSelectedHairType(option.value)}
                         activeColor="#759A52"
                         inactiveColor="#FFFFFF80"
                         size={34}
@@ -418,33 +591,139 @@ export default function EditSkinHairConditionScreen() {
                       />
                     }
                     height={56}
-                    withShadow={true}
                     gradientColors={['#e2d2c1', '#e2d2c1']}
                     textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
                     textStyle={{
-                      fontSize: columns === 1 ? 15 : 13,
-                      fontFamily: 'Outfit-Medium',
-                      textAlign: 'center',
-                      flexWrap: 'wrap',
-                      flexShrink: 1,
-                      marginLeft: columns === 1 ? 0 : 8,
+                      fontSize: 14,
+                      fontFamily: 'Outfit-Regular',
+                      width: '100%',
+                      textAlign: 'left',
+                      marginLeft: 40,
                     }}
                   />
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
 
-          <View className="mt-6 gap-3">
-            <PrimaryButton
-              title={isSaving ? 'Saving...' : 'Save Changes'}
-              onPress={handleSave}
-              disabled={isSaving}
-              isLoading={isSaving}
-            />
+            {/* Hair Concerns */}
+            <Text className="mb-2 font-outfit text-[14px] text-titleTextColor">
+              Hair Concerns (Select all that apply)
+            </Text>
+            <View className="mb-0 flex-row flex-wrap justify-between">
+              {allHairConcerns.map((option) => {
+                const isSelected = selectedHairConcerns.includes(option.value);
+                const isOther = option.value === 'hair_other';
+
+                if (isOther) {
+                  return (
+                    <View
+                      key={option.id}
+                      style={{
+                        width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
+                        marginBottom: 12,
+                      }}>
+                      <PrimaryButton
+                        title={option.label}
+                        onPress={() => toggleHairConcern(option.value)}
+                        leftIcon={
+                          <CheckIconButton
+                            value={showHairCustomInput}
+                            onValueChange={() => toggleHairConcern(option.value)}
+                            activeColor="#759A52"
+                            inactiveColor="#361A0D"
+                            size={24}
+                          />
+                        }
+                        height={56}
+                        withShadow={true}
+                        gradientColors={['#E8DDD0', '#E8DDD0']}
+                        textClassName={showHairCustomInput ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                        textStyle={{
+                          fontSize: columns === 1 ? 15 : 13,
+                          fontFamily: 'Outfit-Medium',
+                          textAlign: 'center',
+                          flexWrap: 'wrap',
+                          flexShrink: 1,
+                          marginLeft: columns === 1 ? 0 : 8,
+                        }}
+                      />
+                    </View>
+                  );
+                }
+
+                return (
+                  <View
+                    key={option.id}
+                    style={{
+                      width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
+                      marginBottom: 12,
+                    }}>
+                    <PrimaryButton
+                      title={option.label}
+                      onPress={() => toggleHairConcern(option.value)}
+                      leftIcon={
+                        <CheckIconButton
+                          value={isSelected}
+                          onValueChange={() => toggleHairConcern(option.value)}
+                          activeColor="#759A52"
+                          inactiveColor="#361A0D"
+                          size={24}
+                        />
+                      }
+                      height={56}
+                      withShadow={true}
+                      gradientColors={['#E8DDD0', '#E8DDD0']}
+                      textClassName={isSelected ? 'text-[#759A52]' : 'text-[#4A3F35]'}
+                      textStyle={{
+                        fontSize: columns === 1 ? 15 : 13,
+                        fontFamily: 'Outfit-Medium',
+                        textAlign: 'center',
+                        flexWrap: 'wrap',
+                        flexShrink: 1,
+                        marginLeft: columns === 1 ? 0 : 8,
+                      }}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Hair Custom Input Section */}
+            {showHairCustomInput && (
+              <Animated.View
+                style={{
+                  marginTop: 16,
+                  marginBottom: 16,
+                  opacity: hairFadeAnim,
+                  transform: [{ translateY: hairSlideAnim }],
+                }}>
+                <InputField
+                  value={hairCustomConcern}
+                  handler={(_, val) => setHairCustomConcern(val)}
+                  placeHolder="Enter your hair concern (e.g., Split ends, Frizz, etc.)"
+                  showLabel={false}
+                  height={56}
+                  withShadow={true}
+                  borderRadius={100}
+                  inputStyle={{ fontSize: 13 }}
+                  animated={true}
+                  animationDuration={200}
+                  initialOpacity={0}
+                />
+              </Animated.View>
+            )}
+
+            <View className="mt-6 gap-3">
+              <PrimaryButton
+                title={isSaving ? 'Saving...' : 'Save Changes'}
+                onPress={handleSave}
+                disabled={isSaving}
+                isLoading={isSaving}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

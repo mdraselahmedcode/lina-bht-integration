@@ -90,3 +90,9 @@ export { ArticleIcon } from './ArticleIcon';
 export { MenoPauseIcon } from './MenopauseIcon';
 
 export { LymphaticMassageIcon } from './LymphaticMassageIcon';
+
+export { SecureIcon } from './SecureIcon';
+
+export { MinusIcon } from './MinusIcon';
+
+export { CircleCornerCuttedIcon } from './CircleCornerCuttedIcon';

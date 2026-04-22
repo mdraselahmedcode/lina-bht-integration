@@ -46,7 +46,7 @@ export default function LoadingScreen({
   backgroundColor = '#E8DDD0',
   loaderColor = '#95B287',
   loadingText = 'Setting up your environment ',
-  transparent = false,
+  transparent = true,
 }: LoadingScreenProps) {
   return (
     <View

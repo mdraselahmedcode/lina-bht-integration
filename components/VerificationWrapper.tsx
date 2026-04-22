@@ -84,7 +84,9 @@ const VerificationWrapper: React.FC<VerificationWrapperProps> = ({
     <View className="px-container">
       <View className="mb-10">
         <AuthFormTitle text={authTitle} />
-        <Text className="text-center font-outfit text-[14px] text-titleTextColor">{subtitle}</Text>
+        <Text className="text-center font-outfit text-[14px] text-titleTextColor/60">
+          {subtitle}
+        </Text>
       </View>
 
       <OtpInput
