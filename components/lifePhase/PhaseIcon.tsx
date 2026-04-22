@@ -1,7 +1,6 @@
-// components/lifePhase/PhaseIcon.tsx
 import React from 'react';
 import { MenoPauseIcon, PeriodIcon, PostpartumIcon, PregnantIcon } from '@/components/icons';
-import { PhaseIconType } from '@/types/phaseIcon';
+import { PhaseIconType } from '@/types/lifePhase';
 
 interface PhaseIconProps {
   type: PhaseIconType;
