@@ -198,7 +198,7 @@ export default function RootLayout() {
 
   // Show loading screen while preparing
   if (!fontsLoaded || !isReady) {
-    return <LoadingScreen loadingText="The system is getting ready for you" />;
+    return <LoadingScreen loadingText="The system is getting ready for you" transparent={false} />;
   }
 
   return (
