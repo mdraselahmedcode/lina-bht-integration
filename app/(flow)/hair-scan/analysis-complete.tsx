@@ -236,7 +236,7 @@ const HairAnalysisCompleteScreen = () => {
           <PrimaryButton
             title="Generate Your Routine"
             onPress={() => {
-              router.push('/(main)/routines');
+              router.push('/(flow)/routines/ai-routine-generate/ai-routine');
             }}
             style={{ marginTop: 32 }}
           />

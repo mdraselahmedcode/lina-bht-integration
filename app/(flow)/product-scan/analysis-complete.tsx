@@ -365,7 +365,7 @@ const AiAnalysisCompleteScreen = () => {
           <PrimaryVariantButton
             title="Get Recommendations"
             onPress={() => {
-              // router.push('/(flow)/ai-assistant');
+              router.push('/(flow)/routines/ai-routine-generate/ai-routine');
             }}
             style={{ marginBottom: 4, marginTop: 32 }}
           />

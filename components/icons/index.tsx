@@ -105,3 +105,6 @@ export { ManBottomLessIcon } from './ManBottomLessIcon';
 export { SquareFrameIcon } from './SquareFrameIcon';
 
 export { BarCodeScanningIcon } from './BarcodeScanningIcon';
+export { TrashBinIcon } from './TrashBinIcon';
+
+export { CalendarIcon } from './CalendarIcon';
