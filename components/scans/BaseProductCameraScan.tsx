@@ -1,3 +1,4 @@
+// components/scans/BaseProductCameraScan.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -14,8 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../buttons/PrimaryButton';
+import { PreScanInstructions } from '@/components/scans/PreScanInstructions';
+
+import { BarCodeScanningIcon, CameraIcon, SquareFrameIcon, SunIcon } from '../icons';
 
 const { width, height } = Dimensions.get('window');
+
+type ScanMode = 'barcode' | 'manual';
 
 interface BaseProductCameraScanProps {
   scanType: string;
@@ -34,14 +40,13 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
   onBarcodeScanned,
   enableAutoScan = true,
 }) => {
-  // ✅ ALL HOOKS MUST BE CALLED FIRST - before any conditional returns
   const [permission, requestPermission] = useCameraPermissions();
   const [isTakingPicture, setIsTakingPicture] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
-  const [barcodeBounds, setBarcodeBounds] = useState<any>(null);
-  const [showDynamicFrame, setShowDynamicFrame] = useState(false);
-  const [frameHeight, setFrameHeight] = useState(height * 0.2); // Store frame height
+  const [frameHeight, setFrameHeight] = useState(height * 0.25);
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [scanMode, setScanMode] = useState<ScanMode>('barcode');
 
   const cameraRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
@@ -50,7 +55,6 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
   const frameScale = useRef(new Animated.Value(1)).current;
   const scanLineTranslate = useRef(new Animated.Value(0)).current;
 
-  // Measure the actual frame height on layout
   const onFrameLayout = (event: any) => {
     const { height: measuredHeight } = event.nativeEvent.layout;
     setFrameHeight(measuredHeight);
@@ -58,11 +62,11 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
 
   // Continuous scan line animation
   useEffect(() => {
-    if (isScanning && enableAutoScan && frameHeight > 0) {
+    if (isScanning && enableAutoScan && scanMode === 'barcode' && frameHeight > 0) {
       const animation = Animated.loop(
         Animated.sequence([
           Animated.timing(scanLineTranslate, {
-            toValue: frameHeight, // Use actual frame height
+            toValue: frameHeight,
             duration: 2000,
             useNativeDriver: true,
           }),
@@ -76,46 +80,42 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
       animation.start();
       return () => animation.stop();
     }
-  }, [isScanning, enableAutoScan, frameHeight, scanLineTranslate]);
+  }, [isScanning, enableAutoScan, scanMode, frameHeight, scanLineTranslate]);
 
-  // Handle barcode detection with dynamic positioning
+  // Handle barcode detection
   const handleBarcodeScanned = (scanningResult: BarcodeScanningResult) => {
+    if (scanMode !== 'barcode') return;
+
+    console.log('📷 Barcode detected:', scanningResult.data);
+
     if (lastScannedCode === scanningResult.data || !isScanning || !enableAutoScan) {
       return;
     }
 
-    // Get barcode position from the scan result
-    if (scanningResult.bounds) {
-      setBarcodeBounds(scanningResult.bounds);
-      setShowDynamicFrame(true);
-    }
-
     Vibration.vibrate(50);
-    console.log('Barcode detected:', scanningResult);
-    console.log('Barcode position:', scanningResult.bounds);
 
     setLastScannedCode(scanningResult.data);
     setIsScanning(false);
 
-    // Slight delay to show the detection animation
+    if (onBarcodeScanned) {
+      onBarcodeScanned(scanningResult);
+    }
+
     setTimeout(() => {
-      if (onBarcodeScanned) {
-        onBarcodeScanned(scanningResult);
-      } else {
-        router.push({
-          pathname: `/(flow)/${scanType}/loading-screen`,
-          params: {
-            barcode: scanningResult.data,
-            barcodeType: scanningResult.type,
-            scanType: scanType,
-          },
-        });
-      }
+      router.push({
+        pathname: `/(flow)/${scanType}/loading-screen`,
+        params: {
+          barcode: scanningResult.data,
+          barcodeType: scanningResult.type,
+          scanType: scanType,
+        },
+      });
     }, 300);
   };
 
+  // Handle manual capture
   const takePicture = async () => {
-    if (cameraRef.current && !isTakingPicture) {
+    if (cameraRef.current && !isTakingPicture && scanMode === 'manual') {
       setIsTakingPicture(true);
       try {
         const photo = await cameraRef.current.takePictureAsync({
@@ -147,33 +147,43 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
   const resetScanning = () => {
     setLastScannedCode('');
     setIsScanning(true);
-    setShowDynamicFrame(false);
-    setBarcodeBounds(null);
   };
 
-  // Calculate dynamic frame styles based on barcode position
-  const getDynamicFrameStyle = () => {
-    if (!barcodeBounds) return {};
+  const productScanSteps = [
+    {
+      id: 'lighting',
+      icon: <SunIcon size={24} color="#F59E0B" />,
+      title: 'Good Lighting',
+      description: 'Ensure the product label is well-lit and readable.',
+    },
+    {
+      id: 'focus',
+      icon: <BarCodeScanningIcon size={24} color="#3B82F6" />,
+      title: 'Focus on Code',
+      description: 'Center the barcode or QR code within the frame for quick detection.',
+    },
+    {
+      id: 'stability',
+      icon: <SquareFrameIcon size={24} color="#7A8B6A" />,
+      title: 'Hold Steady',
+      description: 'Keep the product steady and avoid glare or shadows.',
+    },
+  ];
 
-    const frameWidth = barcodeBounds.size.width;
-    const frameHeight = barcodeBounds.size.height;
-    const left = barcodeBounds.origin.x;
-    const top = barcodeBounds.origin.y;
+  if (showInstructions) {
+    return (
+      <PreScanInstructions
+        onStart={() => setShowInstructions(false)}
+        title="For best results, follow these steps :"
+        headerTitle="Scan Preparation"
+        subTitle="Select what you would like to analyze today. "
+        videoSource={require('@/assets/videos/product_scan_guide.mp4')}
+        instructionSteps={productScanSteps}
+        startButtonTitle="Start Scanning"
+      />
+    );
+  }
 
-    return {
-      position: 'absolute' as const,
-      left: left - 10,
-      top: top - 10,
-      width: frameWidth + 20,
-      height: frameHeight + 20,
-      borderWidth: 2,
-      borderColor: '#8FB87A',
-      borderRadius: 8,
-      backgroundColor: 'rgba(143, 184, 122, 0.15)',
-    };
-  };
-
-  // ✅ NOW we can do conditional returns AFTER all hooks
   if (!permission) return <View />;
 
   if (!permission.granted) {
@@ -187,6 +197,59 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
     );
   }
 
+  // Create rounded corner component for cleaner code
+  const RoundedCorner = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => {
+    const getCornerStyle = () => {
+      switch (position) {
+        case 'tl':
+          return { top: -3, left: -3 };
+        case 'tr':
+          return { top: -3, right: -3 };
+        case 'bl':
+          return { bottom: -3, left: -3 };
+        case 'br':
+          return { bottom: -3, right: -3 };
+      }
+    };
+
+    const getLineStyles = () => {
+      const isTop = position === 'tl' || position === 'tr';
+      const isLeft = position === 'tl' || position === 'bl';
+      const isRight = position === 'tr' || position === 'br';
+      const isBottom = position === 'bl' || position === 'br';
+
+      return {
+        horizontal: {
+          position: 'absolute' as const,
+          [isTop ? 'top' : 'bottom']: 0,
+          [isLeft ? 'left' : 'right']: 0,
+          width: 24,
+          height: 3,
+          borderRadius: 3,
+          backgroundColor: '#8FB87A',
+        },
+        vertical: {
+          position: 'absolute' as const,
+          [isTop ? 'top' : 'bottom']: 0,
+          [isLeft ? 'left' : 'right']: 0,
+          width: 3,
+          height: 24,
+          borderRadius: 3,
+          backgroundColor: '#8FB87A',
+        },
+      };
+    };
+
+    const lineStyles = getLineStyles();
+
+    return (
+      <View style={[getCornerStyle(), { position: 'absolute', width: 30, height: 30 }]}>
+        <View style={lineStyles.horizontal} />
+        <View style={lineStyles.vertical} />
+      </View>
+    );
+  };
+
   return (
     <View className="flex-1 bg-black">
       <CameraView
@@ -194,136 +257,99 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
         style={StyleSheet.absoluteFillObject}
         facing="back"
         barcodeScannerSettings={{
-          barcodeTypes: [
-            'ean13',
-            'ean8',
-            'upc_a',
-            'upc_e',
-            'code128',
-            'code39',
-            'qr',
-            'pdf417',
-            'aztec',
-            'codabar',
-            'code93',
-            'itf14',
-          ],
+          barcodeTypes:
+            scanMode === 'barcode'
+              ? [
+                  'ean13',
+                  'ean8',
+                  'upc_a',
+                  'upc_e',
+                  'code128',
+                  'code39',
+                  'qr',
+                  'pdf417',
+                  'aztec',
+                  'codabar',
+                  'code93',
+                  'itf14',
+                ]
+              : [],
         }}
-        onBarcodeScanned={isScanning && enableAutoScan ? handleBarcodeScanned : undefined}
+        onBarcodeScanned={scanMode === 'barcode' ? handleBarcodeScanned : undefined}
       />
 
       <View className="absolute inset-0">
         {/* Dark overlay */}
         <View className="absolute inset-0 bg-black/50" />
 
-        {/* Barcode Scanning Frame - Static */}
-        {!showDynamicFrame && (
+        {/* Mode Switcher */}
+        <View
+          style={{
+            position: 'absolute',
+            top: Math.max(insets.top, 90),
+            left: 20,
+            right: 20,
+            flexDirection: 'row',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            borderRadius: 30,
+            padding: 4,
+            zIndex: 20,
+          }}>
+          <TouchableOpacity
+            onPress={() => setScanMode('barcode')}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 26,
+              backgroundColor: scanMode === 'barcode' ? '#8FB87A' : 'transparent',
+              alignItems: 'center',
+            }}>
+            <Text
+              className="font-outfitMedium text-[14px]"
+              style={{ color: scanMode === 'barcode' ? '#fff' : 'rgba(255,255,255,0.6)' }}>
+              Scan Barcode/QR
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setScanMode('manual')}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 26,
+              backgroundColor: scanMode === 'manual' ? '#8FB87A' : 'transparent',
+              alignItems: 'center',
+            }}>
+            <Text
+              className="font-outfitMedium text-[14px]"
+              style={{ color: scanMode === 'manual' ? '#fff' : 'rgba(255,255,255,0.6)' }}>
+              Manual Capture
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Scanning Frame - Only show in barcode mode */}
+        {scanMode === 'barcode' && (
           <View className="flex-1 items-center justify-center">
             <Animated.View
               onLayout={onFrameLayout}
               style={{
                 width: width * 0.85,
-                height: height * 0.2,
-                borderWidth: 2,
-                borderColor: '#3B82F600',
-                borderRadius: 16,
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                height: height * 0.25,
+                borderRadius: 0,
+                // backgroundColor: 'rgba(143, 184, 122, 0.08)',
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
                 justifyContent: 'center',
                 alignItems: 'center',
                 position: 'relative',
                 transform: [{ scale: frameScale }],
               }}>
-              {/* Corner accents */}
-              <View style={{ position: 'absolute', top: -2, left: -2, width: 30, height: 30 }}>
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: 20,
-                    height: 3,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: 3,
-                    height: 20,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-              </View>
-              <View style={{ position: 'absolute', top: -2, right: -2, width: 30, height: 30 }}>
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    width: 20,
-                    height: 3,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    width: 3,
-                    height: 20,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-              </View>
-              <View style={{ position: 'absolute', bottom: -2, left: -2, width: 30, height: 30 }}>
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    width: 20,
-                    height: 3,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    width: 3,
-                    height: 20,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-              </View>
-              <View style={{ position: 'absolute', bottom: -2, right: -2, width: 30, height: 30 }}>
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    width: 20,
-                    height: 3,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    width: 3,
-                    height: 20,
-                    backgroundColor: '#E8DDD0',
-                  }}
-                />
-              </View>
+              {/* Rounded corner accents with fully rounded corners */}
+              <RoundedCorner position="tl" />
+              <RoundedCorner position="tr" />
+              <RoundedCorner position="bl" />
+              <RoundedCorner position="br" />
 
-              {/* Static scan line - now properly constrained within frame */}
+              {/* Scan line */}
               {isScanning && enableAutoScan && (
                 <Animated.View
                   style={{
@@ -332,123 +358,48 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
                     left: 0,
                     right: 0,
                     height: 2,
-                    backgroundColor: '#E8DDD0',
-                    shadowColor: '#E8DDD0',
+                    backgroundColor: '#8FB87A',
+                    shadowColor: '#8FB87A',
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 1,
                     shadowRadius: 4,
+                    borderRadius: 2,
                     transform: [{ translateY: scanLineTranslate }],
                   }}
                 />
               )}
 
               <Text className="text-center font-outfit text-sm text-white">
-                Position barcode within frame
+                Position barcode or QR code within frame
               </Text>
             </Animated.View>
           </View>
         )}
 
-        {/* Dynamic Frame - Follows the detected barcode */}
-        {showDynamicFrame && barcodeBounds && (
-          <Animated.View
-            style={[
-              getDynamicFrameStyle(),
-              {
-                transform: [{ scale: frameScale }],
-              },
-            ]}>
-            {/* Dynamic corner accents */}
-            <View style={{ position: 'absolute', top: -2, left: -2, width: 20, height: 20 }}>
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: 15,
-                  height: 2,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: 2,
-                  height: 15,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
+        {/* Manual Capture Frame - Show in manual mode */}
+        {/* {scanMode === 'manual' && (
+          <View className="flex-1 items-center justify-center">
+            <View
+              style={{
+                width: width * 0.9,
+                height: height * 0.5,
+                borderRadius: 24,
+                borderWidth: 2,
+                borderColor: '#8FB87A',
+                backgroundColor: 'rgba(143,184,122,0.1)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+              <Ionicons name="camera-outline" size={48} color="#8FB87A" />
+              <Text className="mt-4 text-center font-outfit text-sm text-white">
+                Frame your product here
+              </Text>
+              <Text className="mt-2 text-center font-outfit text-xs text-white/60">
+                Ensure good lighting and clear visibility of the product label
+              </Text>
             </View>
-            <View style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20 }}>
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: 15,
-                  height: 2,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: 2,
-                  height: 15,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-            </View>
-            <View style={{ position: 'absolute', bottom: -2, left: -2, width: 20, height: 20 }}>
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  width: 15,
-                  height: 2,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  width: 2,
-                  height: 15,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-            </View>
-            <View style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20 }}>
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: 15,
-                  height: 2,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: 2,
-                  height: 15,
-                  backgroundColor: '#8FB87A',
-                }}
-              />
-            </View>
-          </Animated.View>
-        )}
+          </View>
+        )} */}
 
         {/* Back Button */}
         <TouchableOpacity
@@ -478,41 +429,55 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
             alignItems: 'center',
           }}>
           <Text className="mb-2 text-center font-outfitMedium text-base text-white">
-            {enableAutoScan ? 'Auto-detecting barcode...' : title}
+            {scanMode === 'barcode'
+              ? enableAutoScan
+                ? 'Auto-detecting barcode/QR...'
+                : title
+              : 'Ready to capture product photo'}
           </Text>
           <Text className="text-center font-outfit text-sm text-white/70">
-            {enableAutoScan ? 'Frame will automatically adjust to the barcode' : subtitle}
+            {scanMode === 'barcode'
+              ? enableAutoScan
+                ? 'Position the code within the frame for automatic detection'
+                : subtitle
+              : 'Tap the capture button below to take a photo'}
           </Text>
-
-          {enableAutoScan && !isScanning && (
-            <View className="mt-4 flex-row items-center rounded-full bg-green-500/20 px-4 py-2">
-              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-              <Text className="ml-2 text-white">Barcode detected! Processing...</Text>
-            </View>
-          )}
         </View>
 
-        {/* Capture Button */}
-        <View
-          style={{
-            position: 'absolute',
-            bottom: Math.max(insets.bottom + 20, 30),
-            left: 20,
-            right: 20,
-            alignItems: 'center',
-            gap: 12,
-          }}>
-          <PrimaryButton
-            title={enableAutoScan ? 'Manual Capture (if barcode fails)' : 'Capture Product'}
-            onPress={takePicture}
-            disabled={isTakingPicture}
-            isLoading={isTakingPicture}
-            loaderColor="#361A0D"
-            style={{ width: '100%' }}
-            textStyle={{ fontSize: 16, fontWeight: '600' }}
-          />
+        {/* Capture Button - For manual mode only */}
+        {scanMode === 'manual' && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: Math.max(insets.bottom + 20, 30),
+              left: 20,
+              right: 20,
+              alignItems: 'center',
+              gap: 12,
+            }}>
+            <PrimaryButton
+              title="Capture Photo"
+              onPress={takePicture}
+              disabled={isTakingPicture}
+              isLoading={isTakingPicture}
+              loaderColor="#361A0D"
+              style={{ width: '100%' }}
+              gradientColors={['#759A52', '#FFFFFF99']}
+              textStyle={{ fontSize: 16, fontWeight: '600' }}
+            />
+          </View>
+        )}
 
-          {enableAutoScan && !isScanning && (
+        {/* Reset button for barcode mode after detection */}
+        {scanMode === 'barcode' && enableAutoScan && !isScanning && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: Math.max(insets.bottom + 20, 30),
+              left: 20,
+              right: 20,
+              alignItems: 'center',
+            }}>
             <TouchableOpacity
               onPress={resetScanning}
               style={{ paddingVertical: 8, paddingHorizontal: 16 }}>
@@ -520,8 +485,8 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
                 Tap to scan again
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
       </View>
     </View>
   );

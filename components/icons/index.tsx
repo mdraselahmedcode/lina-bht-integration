@@ -1,4 +1,5 @@
 import { CrossInCircleIcon } from './CrossInCircleIcon';
+import { SquareFrameIcon } from './SquareFrameIcon';
 
 export { ArrowRightIcon } from './ArrowRightIcon';
 export { EyeOpenIcon } from './EyeOpenIcon';
@@ -98,3 +99,9 @@ export { MinusIcon } from './MinusIcon';
 export { CircleCornerCuttedIcon } from './CircleCornerCuttedIcon';
 
 export { BookIcon } from './BookIcon';
+
+export { ManBottomLessIcon } from './ManBottomLessIcon';
+
+export { SquareFrameIcon } from './SquareFrameIcon';
+
+export { BarCodeScanningIcon } from './BarcodeScanningIcon';

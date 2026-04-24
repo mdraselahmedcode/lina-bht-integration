@@ -15,7 +15,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { saveFaceScanCaptures } from '@/utils/storage';
-import { PreScanInstructions } from '@/app/(flow)/face-scan/PreScanInstructions';
+import { PreScanInstructions } from '@/components/scans/PreScanInstructions';
+
+import { SunIcon, ManBottomLessIcon, SquareFrameIcon } from '@/components/icons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -374,10 +376,45 @@ export const MultiAngleCameraScan: React.FC<MultiAngleCameraScanProps> = ({
     }
   };
 
-  // ─── Pre-scan instructions ────────────────────────────────────────────────────
+  const faceScanSteps = [
+    {
+      id: 'lighting',
+      icon: <SunIcon size={24} color="#F59E0B" />,
+      title: 'Good Lighting',
+      description: 'Find a well-lit area, preferably natural daylight facing a window.',
+    },
+    {
+      id: 'clear_face',
+      icon: <ManBottomLessIcon size={24} color="#3B82F6" />,
+      title: 'Clear Face',
+      description: 'Remove makeup, glasses, and pull hair back from your face.',
+    },
+    {
+      id: 'positioning',
+      icon: <SquareFrameIcon size={24} color="#7A8B6A" />,
+      title: 'Positioning',
+      description: 'Hold phone at eye level, about 30cm away. Fill the oval frame.',
+    },
+  ];
+
   if (showInstructions) {
-    return <PreScanInstructions onStart={() => setShowInstructions(false)} />;
+    return (
+      <PreScanInstructions
+        onStart={() => setShowInstructions(false)}
+        title="For best results, follow these steps :"
+        headerTitle="Face Scan Instructions"
+        subTitle="For personalized face and skin analysis"
+        videoSource={require('@/assets/videos/face_scan_guide.mp4')}
+        instructionSteps={faceScanSteps}
+        startButtonTitle="Start Scan"
+      />
+    );
   }
+
+  // ─── Pre-scan instructions ────────────────────────────────────────────────────
+  // if (showInstructions) {
+  //   return <PreScanInstructions onStart={() => setShowInstructions(false)} />;
+  // }
 
   if (!permission) return <View />;
 

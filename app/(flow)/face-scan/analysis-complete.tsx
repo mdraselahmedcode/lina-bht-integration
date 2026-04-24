@@ -325,7 +325,7 @@ const AiAnalysisCompleteScreen = () => {
             onPress={() => {
               router.push('/(main)/routines');
             }}
-            style={{ marginBottom: 20, marginTop: 32 }}
+            style={{ marginTop: 32 }}
           />
 
           <TouchableOpacity
