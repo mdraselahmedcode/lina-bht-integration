@@ -30,7 +30,7 @@ export const RecipesSection: React.FC<RecipesSectionProps> = ({
   const paddingHorizontal = 32;
   const availableWidth = screenWidth - paddingHorizontal;
   const cardWidth = Math.min(availableWidth / 1.2, 280); // Wider cards for recipe content
-  const imageHeight = 120; // Fixed height for the image
+  const imageHeight = 160; // Fixed height for the image
 
   if (!recommendedRecipes || recommendedRecipes.length === 0) {
     return (

@@ -1,16 +1,134 @@
-
-
 // app/(main)/routines/step-details.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
 import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
-import { HTMLRenderer } from '@/components/articles/HTMLRenderer';
 import { routineSteps } from '@/constants/routineData';
 import { useToast } from '@/hooks/useToast';
+import { TutorialVideoPlayer } from '@/components/tutorials/TutorialVideoPlayer';
+import { Ionicons } from '@expo/vector-icons';
+import { StarWithDoublePlusIcon } from '@/components/icons/StarWithDoublePlusIcon';
+import { BookIcon, CheckInCircleIcon, FlameIcon } from '@/components/icons';
+import { KeyNutrientsSection, Nutrient } from '@/components/scans/KeyNutrientsSection';
+import {
+  FoodRecommendationSection,
+  RecommendedFood,
+} from '@/components/scans/FoodRecommendationSection';
+import { RecipesSection, RecommendedRecipe } from '@/components/scans/RecipesSection';
+import { HydrationTargetCard } from '@/components/scans/HydrationTargetCard';
+
+// Static nutrients data - just like the others!
+const NUTRIENTS_DATA: Nutrient[] = [
+  {
+    id: 'omega-3',
+    name: 'Omega-3',
+    description: 'Reduces inflammation, strengthens the skin barrier and improves hydration.',
+    imageUrl: require('@/assets/images/nutrition_static_images/omega-3.png'),
+  },
+  {
+    id: 'zinc',
+    name: 'Zinc',
+    description: 'Supports skin healing, reduces inflammation, and helps with acne management.',
+    imageUrl: require('@/assets/images/nutrition_static_images/zinc.png'),
+  },
+  {
+    id: 'vitamin-c',
+    name: 'Vitamin C',
+    description: 'Boosts collagen production, brightens skin, and provides antioxidant protection.',
+    imageUrl: require('@/assets/images/nutrition_static_images/vitamin-c.png'),
+  },
+  {
+    id: 'magnesium',
+    name: 'Magnesium',
+    description:
+      'Supports skin cell repair, balances the microbiome, and calms persistent inflammation.',
+    imageUrl: require('@/assets/images/nutrition_static_images/magnesium.png'),
+  },
+];
+
+// Static recommendation food data
+const RECOMMENDED_FOODS_DATA: RecommendedFood[] = [
+  {
+    id: 'avocado',
+    name: 'Avocado',
+    description: 'Healthy fats',
+    imageUrl: require('@/assets/images/nutrition_static_images/avocado.png'),
+  },
+  {
+    id: 'salmon',
+    name: 'Salmon',
+    description: 'Omega-3',
+    imageUrl: require('@/assets/images/nutrition_static_images/salmon.png'),
+  },
+  {
+    id: 'blueberries',
+    name: 'Blueberries',
+    description: 'Antioxidants',
+    imageUrl: require('@/assets/images/nutrition_static_images/blueberries.png'),
+  },
+  {
+    id: 'spinach',
+    name: 'Spinach',
+    description: 'Magnesium',
+    imageUrl: require('@/assets/images/nutrition_static_images/spinach.png'),
+  },
+  {
+    id: 'chiaseeds',
+    name: 'Chia Seeds',
+    description: 'Antioxidants',
+    imageUrl: require('@/assets/images/nutrition_static_images/chiaseeds.png'),
+  },
+  {
+    id: 'almonds',
+    name: 'Almonds',
+    description: 'Vitamin E',
+    imageUrl: require('@/assets/images/nutrition_static_images/almonds.png'),
+  },
+];
+
+const RECOMMENDED_RECIPES_DATA: RecommendedRecipe[] = [
+  {
+    id: 'avocado-smoothie',
+    title: 'Avocado & Berry Smoothie',
+    description: 'Packed with healthy fats and antioxidants for glowing skin.',
+    imageUrl: require('@/assets/images/nutrition_static_images/recipe_1.jpg'),
+    tags: ['Breakfast', 'Quick'],
+  },
+  {
+    id: 'salmon-bowl',
+    title: 'Omega-3 Salmon Bowl',
+    description: 'Rich in omega-3 fatty acids to reduce inflammation.',
+    imageUrl: require('@/assets/images/nutrition_static_images/recipe_2.jpg'),
+    tags: ['Lunch', 'High Protein'],
+  },
+  {
+    id: 'berry-parfait',
+    title: 'Antioxidant Berry Parfait',
+    description: 'Loaded with vitamin C and antioxidants for skin repair.',
+    imageUrl: require('@/assets/images/nutrition_static_images/recipe_3.jpg'),
+    tags: ['Breakfast', 'Dessert'],
+  },
+  {
+    id: 'spinach-salad',
+    title: 'Magnesium Rich Spinach Salad',
+    description: 'Supports skin cell repair and reduces inflammation.',
+    // imageUrl: require('@/assets/images/nutrition_static_images/recipe_2.jpg'),
+    imageUrl:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSviMY8z9K4g1wxRIUBbyTZ5B8lWTN6_ECvjQ&s',
+    tags: ['Lunch', 'Vegetarian'],
+  },
+  {
+    id: 'chia-pudding',
+    title: 'Chia Seed Pudding',
+    description: 'Rich in omega-3 and fiber for skin health.',
+    imageUrl:
+      'https://images.immediate.co.uk/production/volatile/sites/30/2022/08/Fish-Tacos-1337495.jpg?quality=90&resize=708,643',
+    tags: ['Breakfast', 'Dairy-Free'],
+  },
+];
 
 export default function RoutineStepDetailsScreen() {
   const router = useRouter();
@@ -107,100 +225,194 @@ export default function RoutineStepDetailsScreen() {
           paddingTop: 20,
         }}
         className="flex-1">
-        <View className="px-container">
-          {/* Header */}
-          <View className="mb-6">
-            <View className="mb-2 flex-row items-center gap-2">
-              <Text className="font-outfitBold text-[14px] text-[#977857]">
-                Step {stepDetail.stepNumber}
-              </Text>
-              {stepDetail.type === 'product' && (
-                <View className="rounded-full bg-[#97785720] px-2 py-0.5">
-                  <Text className="font-outfit text-[10px] text-[#977857]">Product</Text>
-                </View>
-              )}
-              {stepDetail.type === 'wellness' && (
-                <View className="rounded-full bg-[#4ADE8020] px-2 py-0.5">
-                  <Text className="font-outfit text-[10px] text-[#4ADE80]">Wellness</Text>
-                </View>
-              )}
-              {isCustom && (
-                <View className="rounded-full bg-[#7A8B6A20] px-2 py-0.5">
-                  <Text className="font-outfit text-[10px] text-[#7A8B6A]">Custom</Text>
-                </View>
-              )}
+        <View className=" px-container ">
+          {/* The Video Player */}
+          <TutorialVideoPlayer
+            videoUrl="https://www.youtube.com/watch?v=McNHLZlNoiA"
+            onReady={() => console.log('Video is ready to play!')}
+            onError={() => alert('Could not load the video.')}
+          />
+          <View className="flex-row items-center gap-3">
+            <Text className="font-outfitMedium text-[18px] text-titleTextColor ">
+              Drawing Up Injectable Medications
+            </Text>
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="time-outline" size={18} />
+              <Text className="font-outfit text-[12px] text-[#2E2117] ">3 min read</Text>
             </View>
-            <Text className="font-outfitBold mb-2 text-[24px] text-titleTextColor">
-              {stepDetail.title}
-            </Text>
-            <Text className="text-descriptionTextColor font-outfit text-[16px]">
-              {stepDetail.description}
-            </Text>
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="videocam-outline" size={18} />
+              <Text className="font-outfit text-[12px] text-[#2E2117] ">Video</Text>
+            </View>
           </View>
 
-          {/* Duration & Frequency Cards - Without Icons */}
-          {(stepDetail.duration || stepDetail.frequency) && (
-            <BorderlessShadowCard style={{ marginBottom: 10, padding: 20 }}>
-              <View className="flex-row justify-between">
-                {stepDetail.duration && (
-                  <View className="flex-1 items-center ">
-                    <Text
-                      className="text-descriptionTextColor mb-1  font-outfitMedium text-[12px]"
-                      style={{ color: '#7A8B6A' }}>
-                      Duration
-                    </Text>
-                    <Text className="font-outfitMedium text-[14px] text-titleTextColor">
-                      {stepDetail.duration}
-                    </Text>
-                  </View>
-                )}
-                {stepDetail.frequency && (
-                  <View className="flex-1 items-center ">
-                    <Text
-                      className="text-descriptionTextColor mb-1 font-outfitMedium text-[12px]"
-                      style={{ color: '#7A8B6A' }}>
-                      Frequency
-                    </Text>
-                    <Text className="font-outfitMedium text-[14px] text-titleTextColor">
-                      {stepDetail.frequency}
-                    </Text>
-                  </View>
-                )}
+          <View className="mt-6 flex-row items-center gap-4 ">
+            <Image
+              source={require('@/assets/images/product_images/cleanser.png')}
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 12,
+                borderWidth: 0.5,
+                borderColor: '#000000',
+                overflow: 'hidden',
+              }}
+              resizeMode="cover"
+            />
+            <View className="flex-1">
+              <Text className="font-outfitMedium text-[16px] text-[#977857] ">Cleanser</Text>
+              <Text className="mt-2 font-outfitMedium text-[22px] text-[#2E2117] ">
+                Gentle Oat Cleanser
+              </Text>
+            </View>
+          </View>
+
+          <Text className="mt-3 text-start font-outfit text-[14px] leading-6 text-[#2E2117CC] ">
+            To protect your barrier, avoid harshchemical exfoliants like PHAs orphysical exfoliants
+            and opt for gentle lactic acid. Always follow up with a ceramide-rich moisturizer to
+            lock in hydration and support the skin&apos;s natural repair process.
+          </Text>
+          <BorderlessShadowCard
+            style={{
+              paddingVertical: 16,
+              paddingHorizontal: 24,
+              marginTop: 24,
+            }}>
+            <View className="flex-row items-center gap-3">
+              {/* <IconBadge icon={<StarWithDoublePlusIcon size={20} color="#361A0D" />} /> */}
+              <View
+                className="h-8 w-8 items-center justify-center bg-backgroundColor "
+                style={{
+                  borderRadius: 6,
+                  // iOS Shadow
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 2,
+                  // Android Shadow
+                  elevation: 3,
+                }}>
+                <StarWithDoublePlusIcon size={20} color="#361A0D" />
               </View>
-            </BorderlessShadowCard>
-          )}
+              <Text className="font-outfitMedium text-[16px] text-[#2E2117] ">Key Benefits</Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <FlameIcon size={16} color="#7A8B6A" style={{ marginTop: 11 }} />
+              <Text className=" mt-3 flex-1 font-outfit text-[14px] text-[#2E2117CC]">
+                Reduces facial puffiness and swelling
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <FlameIcon size={16} color="#7A8B6A" style={{ marginTop: 11 }} />
+              <Text className=" mt-3 font-outfit text-[14px] text-[#2E2117CC]">
+                Promotes toxin removal
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <FlameIcon size={16} color="#7A8B6A" style={{ marginTop: 11 }} />
+              <Text className=" mt-3 flex-1 font-outfit text-[14px] text-[#2E2117CC]">
+                Improves blood circulation for a natural glow
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <FlameIcon size={16} color="#7A8B6A" style={{ marginTop: 11 }} />
+              <Text className=" mt-3 flex-1 font-outfit text-[14px] text-[#2E2117CC]">
+                Relieves tension in jaw and neckRelieves tension in jaw and neckRelieves tension in
+                jaw and neck
+              </Text>
+            </View>
+          </BorderlessShadowCard>
 
-          {/* HTML Content */}
-          {stepDetail.detailedContent && (
-            <BorderlessShadowCard
-              b_tl={0}
-              b_tr={0}
-              b_bl={24}
-              b_br={24}
-              style={{ marginBottom: 16, padding: 20 }}>
-              <HTMLRenderer content={stepDetail.detailedContent} />
-            </BorderlessShadowCard>
-          )}
+          <BorderlessShadowCard
+            b_tl={0}
+            b_tr={0}
+            b_bl={24}
+            b_br={24}
+            style={{
+              paddingVertical: 16,
+              paddingHorizontal: 24,
+              marginTop: 12,
+            }}>
+            <View className="flex-row items-center gap-3  ">
+              <View
+                className="h-8 w-8 items-center justify-center bg-backgroundColor "
+                style={{
+                  borderRadius: 6,
+                  // iOS Shadow
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 2,
+                  // Android Shadow
+                  elevation: 3,
+                }}>
+                <BookIcon size={20} color="#361A0D" />
+              </View>
+              <Text className="font-outfitMedium text-[16px] text-[#2E2117] ">
+                What You’ll Learn
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <CheckInCircleIcon size={16} color="#2E2117" style={{ marginTop: 13 }} />
+              <Text className=" mt-3 flex-1 font-outfit text-[14px] text-[#2E2117CC]">
+                Reduces facial puffiness and swelling
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <CheckInCircleIcon size={16} color="#2E2117" style={{ marginTop: 13 }} />
+              <Text className=" mt-3 font-outfit text-[14px] text-[#2E2117CC]">
+                Promotes toxin removal
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <CheckInCircleIcon size={16} color="#2E2117" style={{ marginTop: 13 }} />
+              <Text className=" mt-3 flex-1 font-outfit text-[14px] text-[#2E2117CC]">
+                Improves blood circulation for a natural glow
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <CheckInCircleIcon size={16} color="#2E2117" style={{ marginTop: 13 }} />
+              <Text className=" mt-3 flex-1 font-outfit text-[14px] text-[#2E2117CC]">
+                Relieves tension in jaw and neckRelieves tension in jaw and neckRelieves tension in
+                jaw and neck
+              </Text>
+            </View>
+          </BorderlessShadowCard>
 
-          {/* Tips Section (if not in HTML) */}
-          {stepDetail.tips &&
-            stepDetail.tips.length > 0 &&
-            !stepDetail.detailedContent?.includes('Pro Tips') && (
-              <BorderlessShadowCard style={{ marginBottom: 16, padding: 20 }}>
-                <Text className="font-outfitSemiBold mb-3 text-[18px] text-titleTextColor">
-                  Pro Tips
-                </Text>
-                {stepDetail.tips.map((tip: string, index: number) => (
-                  <View key={index} className="mb-2 flex-row items-start gap-2">
-                    <Text className="text-[16px]">•</Text>
-                    <Text className="text-descriptionTextColor flex-1 font-outfit text-[14px]">
-                      {tip}
-                    </Text>
-                  </View>
-                ))}
-              </BorderlessShadowCard>
-            )}
+          {/* Key Nutrients for Your Skin - Using static data like the others */}
+          <KeyNutrientsSection
+            nutrients={NUTRIENTS_DATA}
+            title="Key Nutrients for Your Skin"
+            showIcon={true}
+          />
+
+          {/* Food Recommendations */}
+          <FoodRecommendationSection
+            recommendedFoods={RECOMMENDED_FOODS_DATA}
+            title="Your Food Recommendations"
+            showIcon={true}
+          />
+
+          {/* Recipes Skin */}
+          <RecipesSection
+            recommendedRecipes={RECOMMENDED_RECIPES_DATA}
+            title="Recipes for Your Skin"
+            showIcon={true}
+            onRecipePress={(recipe) => {
+              console.log('Recipe pressed:', recipe.title);
+              // Navigate to recipe details
+            }}
+          />
+
+          <HydrationTargetCard
+            goal="2.4L of Water"
+            description="Drinking enough water helps flush inflammatory markers and revitalizes areas detected in your scan."
+            title="Hydration Target"
+            iconSize={20}
+            iconColor="#A68A61"
+          />
         </View>
+        <View className="py-3" />
       </ScrollView>
     </SafeAreaView>
   );
