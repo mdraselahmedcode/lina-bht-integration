@@ -1,187 +1,18 @@
-// // app/(flow)/lymphatic-massage/index.tsx
-// import React, { useState, useMemo } from 'react';
-// import { View, Text, ScrollView, RefreshControl } from 'react-native';
-// import { SafeAreaView } from 'react-native-safe-area-context';
-// import { Ionicons } from '@expo/vector-icons';
-// import CustomHeader from '@/components/header/CustomHeader';
-// import { LAYOUT } from '@/constants/constants';
-// import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
-// import InputField from '@/components/inputs/Input';
-// import { TutorialCard } from '@/components/tutorials/TutorialCard';
-// import { CategoryFilter } from '@/components/articles/CategoryFilter';
-// import { useTutorials } from '@/hooks/useTutorials';
-
-// import { useScreenReady } from '@/hooks/useScreenReady';
-// import LoadingScreen from '@/components/loading/LoadingScreen';
-// import ErrorScreen from '@/components/errors/ErrorScreen';
-// import { Category } from '@/types/article';
-
-// const TUTORIAL_CATEGORIES: Category[] = [
-//   { id: '1', name: 'All' },
-//   { id: '2', name: 'Face' }, // matches 'face'
-//   { id: '3', name: 'Neck' }, // matches 'neck'
-//   { id: '4', name: 'Arms' }, // matches 'arms'
-//   { id: '5', name: 'Leg' }, // matches 'leg'
-//   { id: '6', name: 'Abdomen' }, // Optional: add if needed
-//   { id: '7', name: 'Full Body' }, // matches 'full_body'
-// ];
-
-// const LymphaticMassageScreen = () => {
-//   const { tutorials, isLoading, error, refetch } = useTutorials();
-//   const [searchQuery, setSearchQuery] = useState('');
-//   const [selectedCategory, setSelectedCategory] = useState('All');
-
-//   const { isRendering, isContentReady, renderError } = useScreenReady({
-//     dependencies: [tutorials],
-//     delay: 100,
-//     initialReady: false,
-//   });
-
-//   // Filter tutorials based on search query and selected category
-//   const filteredTutorials = useMemo(() => {
-//     let filtered = [...tutorials];
-
-//     // Filter by category
-//     if (selectedCategory !== 'All') {
-//       filtered = filtered.filter(
-//         (tutorial) => tutorial.category.toLowerCase() === selectedCategory.toLowerCase()
-//       );
-//     }
-
-//     // Filter by search query
-//     if (searchQuery.trim()) {
-//       const query = searchQuery.toLowerCase().trim();
-//       filtered = filtered.filter(
-//         (tutorial) =>
-//           tutorial.title.toLowerCase().includes(query) ||
-//           tutorial.description.toLowerCase().includes(query) ||
-//           tutorial.benefits.some((benefit) => benefit.toLowerCase().includes(query))
-//       );
-//     }
-
-//     return filtered;
-//   }, [tutorials, selectedCategory, searchQuery]);
-
-//   const handleSearch = (text: string) => {
-//     setSearchQuery(text);
-//   };
-
-//   const handleCategorySelect = (categoryName: string) => {
-//     setSelectedCategory(categoryName);
-//   };
-
-//   if (isRendering || isLoading) {
-//     return (
-//       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-//         <LoadingScreen loadingText="Preparing Lymphatic Massage..." />
-//       </SafeAreaView>
-//     );
-//   }
-
-//   if (renderError || error) {
-//     return (
-//       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-//         <CustomHeader title="Lymphatic Massage" height={50} backButton={true} />
-//         <ErrorScreen message={error || renderError || 'Failed to load'} onRetry={refetch} />
-//       </SafeAreaView>
-//     );
-//   }
-
-//   return (
-//     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-//       <CustomHeader title="Lymphatic Massage" height={50} backButton={true} />
-
-//       <ScrollView
-//         contentContainerStyle={{
-//           paddingBottom: LAYOUT.screen.scrollViewPaddingBottom,
-//           paddingTop: 10,
-//           flexGrow: 1,
-//         }}
-//         className="flex-1"
-//         refreshControl={
-//           <RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#977857']} />
-//         }>
-//         <View
-//           className="px-container"
-//           style={{
-//             opacity: isContentReady ? 1 : 0,
-//             transform: [{ translateY: isContentReady ? 0 : 10 }],
-//           }}>
-//           {/* Search Bar */}
-//           <View className="mb-1">
-//             <InputField
-//               value={searchQuery}
-//               handler={(_, value) => handleSearch(value)}
-//               placeHolder="Search tutorials..."
-//               showLabel={false}
-//               height={56}
-//               gradientColors={['#E8DDD0', '#E8DDD0']}
-//               withShadow={true}
-//               borderTopLeftRadius={24}
-//               borderTopRightRadius={24}
-//               borderBottomLeftRadius={0}
-//               borderBottomRightRadius={0}
-//             />
-//           </View>
-
-//           {/* Categories Filter */}
-//           <CategoryFilter
-//             categories={TUTORIAL_CATEGORIES}
-//             selectedCategory={selectedCategory}
-//             onSelectCategory={handleCategorySelect}
-//           />
-
-//           {/* Tutorials Section */}
-//           <View className="mt-3">
-//             <Text className="mb-0 font-outfitMedium text-[18px]" style={{ color: '#361A0D' }}>
-//               {selectedCategory === 'All' ? 'All Tutorials' : `${selectedCategory} Tutorials`}
-//             </Text>
-
-//             {filteredTutorials.length === 0 ? (
-//               <BorderlessShadowCard
-//                 b_tl={24}
-//                 b_tr={24}
-//                 b_bl={24}
-//                 b_br={24}
-//                 style={{ paddingVertical: 32, paddingHorizontal: 24, marginTop: 12 }}>
-//                 <View className="items-center justify-center">
-//                   <Ionicons name="search-outline" size={48} color="#2E211733" />
-//                   <Text className="mt-3 font-outfit text-[14px]" style={{ color: '#2E211766' }}>
-//                     No tutorials found
-//                   </Text>
-//                   <Text className="font-outfit text-[12px]" style={{ color: '#2E211766' }}>
-//                     Try adjusting your search or filter
-//                   </Text>
-//                 </View>
-//               </BorderlessShadowCard>
-//             ) : (
-//               filteredTutorials.map((tutorial, index) => (
-//                 <TutorialCard
-//                   key={tutorial.id}
-//                   tutorial={tutorial}
-//                   isFirst={index === 0}
-//                   isLast={index === filteredTutorials.length - 1}
-//                 />
-//               ))
-//             )}
-//           </View>
-//         </View>
-//       </ScrollView>
-//     </SafeAreaView>
-//   );
-// };
-
-// export default LymphaticMassageScreen;
-
-// app/(flow)/lymphatic-massage/index.tsx
-import React from 'react';
-import { ScrollView, View, Text, Image } from 'react-native';
+// app/(flow)/tutorial-details/index.tsx (using hook properly)
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
+import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
 import { TutorialVideoPlayer } from '@/components/tutorials/TutorialVideoPlayer';
+import { useTutorials } from '@/hooks/useTutorials';
+import { useToast } from '@/hooks/useToast';
 import IconBadge from '@/components/icons/modified/IconBadge';
 import {
+  ArrowRightHalfIcon,
+  ArrowRightIcon,
   EarIcon,
   FlameIcon,
   LoveIcon,
@@ -191,18 +22,65 @@ import {
   WaterGlassIcon,
   ZLikeIcon,
 } from '@/components/icons';
+import IconButton from '@/components/buttons/IconButton';
 import { Ionicons } from '@expo/vector-icons';
 import { FaceIcon } from '@/components/icons/FaceIcon';
 import { WheelChairIcon } from '@/components/icons/WheelChairIcon';
+import { CheckIconButton } from '@/components/CheckIconButton';
 import { StarWithDoublePlusIcon } from '@/components/icons/StarWithDoublePlusIcon';
 
-// Static YouTube video URL for lymphatic massage
-const LYMPHATIC_VIDEO_URL = 'https://www.youtube.com/watch?v=YOUR_VIDEO_ID';
+export default function LymphaticMassageDetailsScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const { showError } = useToast();
+  const { tutorials, isLoading: isTutorialsLoading } = useTutorials();
+  const [tutorial, setTutorial] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-export default function LymphaticMassageScreen() {
+  const tutorialId = Array.isArray(id) ? id[0] : id;
+
+  useEffect(() => {
+    if (!isTutorialsLoading && tutorials.length > 0) {
+      const found = tutorials.find((t) => t.id === tutorialId);
+      if (found) {
+        setTutorial(found);
+      } else {
+        showError('Tutorial not found');
+      }
+      setIsLoading(false);
+    }
+  }, [tutorials, isTutorialsLoading, tutorialId]);
+
+  if (isLoading || isTutorialsLoading) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Tutorial" height={50} backButton={true} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#977857" />
+          <Text className="text-descriptionTextColor mt-4 font-outfit text-[14px]">
+            Loading tutorial...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!tutorial) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Tutorial" height={50} backButton={true} />
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-descriptionTextColor font-outfit text-[16px]">
+            Tutorial not found
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-      <CustomHeader title="Lymphatic Massage" height={50} backButton={true} />
+      <CustomHeader title="Tutorial" height={50} backButton={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -212,115 +90,130 @@ export default function LymphaticMassageScreen() {
         }}
         className="flex-1">
         <View className="px-container">
-          {/* Section 1 - Hero */}
+          {/* Section 1 */}
           <View
-            className="overflow-hidden bg-backgroundColor p-5"
+            className="overflow-hidden bg-backgroundColor p-5" // Added overflow-hidden
             style={{
               borderRadius: 24,
               borderWidth: 2,
               borderLeftWidth: 1,
               borderRightWidth: 1,
+
               borderColor: '#FFFFFF66',
             }}>
-            <View className="flex-1 flex-row items-start gap-3">
+            <View className="flex-1 flex-row items-start gap-3 ">
               <View className="flex-1">
-                <Text className="mb-3 font-outfitMedium text-[24px] text-titleTextColor">
+                <Text
+                  className="mb-3  font-outfitMedium  text-[24px] text-titleTextColor"
+                  style={
+                    {
+                      // textShadowColor: '#FFFFFF',
+                      // textShadowOffset: { width: 1, height: 1 },
+                      // textShadowRadius: 1,
+                    }
+                  }>
                   Support your lymph, transform your skin.
                 </Text>
-                <Text className="font-outfit text-[13px] text-[#6B6B66]">
+                <Text className="font-outfit text-[13px] text-[#6B6B66] ">
                   A simple daily routine to detox, reduce puffiness and reveal your natural glow.
                 </Text>
               </View>
 
               <Image
                 source={require('@/assets/images/lymphatic_massage/face_section_1_right.jpg')}
-                className="h-[153px] w-[115px] rounded-2xl"
+                className="h-[153px] w-[115px] rounded-2xl" // Given explicit height and rounding
                 resizeMode="cover"
               />
             </View>
           </View>
 
-          {/* Section 2 - What is lymphatic system? */}
+          {/* Section 1 */}
           <View
-            className="mt-5 overflow-hidden bg-backgroundColor p-5"
+            className="mt-5 overflow-hidden bg-backgroundColor p-5" // Added overflow-hidden
             style={{
               borderRadius: 24,
               borderWidth: 2,
               borderLeftWidth: 1,
               borderRightWidth: 1,
+
               borderColor: '#FFFFFF66',
             }}>
-            <Text className="font-outfitMedium text-[20px] text-titleTextColor">
+            <Text className="font-outfitMedium text-[20px]  text-titleTextColor  ">
               1. What is the lymphatic system?
             </Text>
-            <View className="mt-3 flex-1 flex-row items-start gap-4">
+            <View className="mt-3 flex-1 flex-row items-start gap-4 ">
               <Image
                 source={require('@/assets/images/lymphatic_massage/face_lymphatic_sys_left.jpg')}
-                className="h-[153px] w-[115px] rounded-2xl"
+                className="h-[153px] w-[115px] rounded-2xl" // Given explicit height and rounding
                 resizeMode="cover"
               />
               <View className="flex-1">
-                <Text className="font-outfit text-[13px] text-[#6B6B66]">
+                <Text className="font-outfit text-[13px] text-[#6B6B66] " style={{}}>
                   The lymphatic system is a network of vessels that helps your body remove waste,
                   toxins and excess fluids.
                 </Text>
-                <Text className="mt-2 font-outfit text-[13px] text-[#6B6B66]">
+                <Text className="mt-2 font-outfit text-[13px] text-[#6B6B66] ">
                   A simple daily routine to detox, reduce puffiness and natural glow.
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Section 3 - Why does lymph become sluggish? */}
+          {/* Section 3 */}
           <View
-            className="mt-5 overflow-hidden bg-backgroundColor p-5"
+            className="mt-5 overflow-hidden bg-backgroundColor p-5" // Added overflow-hidden
             style={{
               borderRadius: 24,
               borderWidth: 2,
               borderLeftWidth: 1,
               borderRightWidth: 1,
+
               borderColor: '#FFFFFF66',
             }}>
-            <Text className="font-outfitMedium text-[20px] text-titleTextColor">
+            <Text className="font-outfitMedium text-[20px]  text-titleTextColor  ">
               2. Why does lymph become sluggish?
             </Text>
-            <View className="mt-4 gap-3">
-              <View className="flex-row items-start">
-                <View className="flex-row items-center gap-3">
+            <View className="mt-4 gap-3 ">
+              <View className="flex-row items-start ">
+                <View className="flex-row items-center gap-3  ">
                   <IconBadge
                     size={28}
                     style={{ backgroundColor: '#EEF1E8', borderWidth: 0 }}
                     icon={<ZLikeIcon width={14} height={14} color="#3F4D3A" />}
                   />
-                  <Text className="font-outfit text-[13px] text-[#2A2A2A]">Lack of movement</Text>
+                  <Text className="font-outfit text-[13px] text-[#2A2A2A] ">Lack of movement</Text>
                 </View>
               </View>
-              <View className="flex-row items-start">
-                <View className="flex-row items-center gap-3">
+              <View className="flex-row items-start ">
+                <View className="flex-row items-center gap-3  ">
                   <IconBadge
                     size={28}
                     style={{ backgroundColor: '#EEF1E8', borderWidth: 0 }}
                     icon={<ThreeCurvedIcon width={14} height={14} color="#3F4D3A" />}
                   />
-                  <Text className="font-outfit text-[13px] text-[#2A2A2A]">
+                  <Text className="font-outfit text-[13px] text-[#2A2A2A] ">
                     Stress and shallow breathing
                   </Text>
                 </View>
               </View>
 
-              <View className="flex-row items-start">
-                <View className="flex-row items-center gap-3">
+              <View className="flex-row items-start ">
+                <View className="flex-row items-center gap-3  ">
                   <IconBadge
                     size={28}
                     style={{ backgroundColor: '#EEF1E8', borderWidth: 0 }}
                     icon={<FlameIcon width={14} height={14} color="#3F4D3A" />}
                   />
-                  <Text className="font-outfit text-[13px] text-[#2A2A2A]">Dehydration</Text>
+                  <Text className="font-outfit text-[13px] text-[#2A2A2A] ">Dehydration</Text>
                 </View>
               </View>
             </View>
-            <View className="mt-5 bg-[#EEF1E8] p-3" style={{ borderRadius: 16 }}>
-              <Text className="font-outfitMedium text-[16px] text-[#2A2A2A]">
+            <View
+              className="mt-5 bg-[#EEF1E8] p-3 "
+              style={{
+                borderRadius: 16,
+              }}>
+              <Text className="font-outfitMedium text-[16px] text-[#2A2A2A]  ">
                 When lymph slows down, you may experience:
               </Text>
               <View className="mt-3 gap-1">
@@ -348,16 +241,18 @@ export default function LymphaticMassageScreen() {
             </View>
 
             <View
-              className="mt-4 flex-row flex-wrap items-center gap-6 bg-[#EEF1E8] px-4 py-3"
-              style={{ borderRadius: 16 }}>
-              <Text className="mt-2 flex-1 font-outfit text-[13px] text-[#6B6B66]">
+              className=" mt-4 flex-row flex-wrap items-center gap-6 bg-[#EEF1E8] px-[16px] py-[14px] "
+              style={{
+                borderRadius: 16,
+              }}>
+              <Text className="mt-2 flex-1 font-outfit text-[13px] text-[#6B6B66] ">
                 Most skin and face issues are linked to poor lymph circulation.
               </Text>
               <Ionicons name="arrow-forward" size={16} color="#3F4D3A" />
             </View>
           </View>
 
-          {/* Section 4 - Before you start */}
+          {/* Section 3 - Before you start */}
           <View
             className="mt-5 overflow-hidden bg-backgroundColor"
             style={{
@@ -368,6 +263,7 @@ export default function LymphaticMassageScreen() {
               borderColor: '#FFFFFF66',
               paddingVertical: 20,
             }}>
+            {/* Header Section */}
             <View className="px-5">
               <Text className="font-outfitMedium text-[20px] text-titleTextColor">
                 3. Before you start
@@ -377,11 +273,13 @@ export default function LymphaticMassageScreen() {
               </Text>
             </View>
 
+            {/* Slideable Icons Section - Fixed spacing */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }} // Use gap for consistent spacing
               className="mt-6">
+              {/* Item 1 - Fixed width ensures consistent spacing */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<ThreeCurvedIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -389,6 +287,7 @@ export default function LymphaticMassageScreen() {
                 </Text>
               </View>
 
+              {/* Item 2 */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<FaceIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -396,6 +295,7 @@ export default function LymphaticMassageScreen() {
                 </Text>
               </View>
 
+              {/* Item 3 */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<WheelChairIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -403,6 +303,7 @@ export default function LymphaticMassageScreen() {
                 </Text>
               </View>
 
+              {/* Item 4 */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<WaterGlassIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -411,6 +312,7 @@ export default function LymphaticMassageScreen() {
               </View>
             </ScrollView>
 
+            {/* Footer Link Section */}
             <View className="mt-6 px-5">
               <View
                 className="flex-row items-center justify-between bg-[#EEF1E8] px-4 py-3"
@@ -423,8 +325,8 @@ export default function LymphaticMassageScreen() {
             </View>
           </View>
 
-          {/* Section 5 - Lymphatic Massage Tutorial with Video */}
-          {/* <View
+          {/* Section 4 */}
+          <View
             className="mt-5 overflow-hidden bg-backgroundColor p-5"
             style={{
               borderRadius: 24,
@@ -438,21 +340,23 @@ export default function LymphaticMassageScreen() {
             </Text>
 
             <View className="mt-3">
-              <TutorialVideoPlayer videoUrl={LYMPHATIC_VIDEO_URL} />
+              {/* Video Player */}
+              <TutorialVideoPlayer videoUrl={tutorial.videoUrl} />
             </View>
-            <View className="mt-3 flex-row items-center gap-3">
+            <View className="flex-row items-center gap-3 ">
               <View
-                className="flex-1 rounded-2xl"
-                style={{ backgroundColor: '#F5F0E8', padding: 12 }}>
-                <Text className="mb-2 font-outfitMedium text-[16px] text-titleTextColor">
+                className="flex-1 rounded-2xl "
+                style={{
+                  backgroundColor: '#F5F0E8',
+                  padding: 12,
+                }}>
+                <Text className="mb-2 font-outfitMedium text-[16px] text-titleTextColor ">
                   How often?
                 </Text>
                 <View className="gap-2">
                   <View className="flex-row items-start gap-x-2">
                     <View className="mt-[6px] h-2 w-2 rounded-full bg-[#3F4D3A]" />
-                    <Text className="font-outfit text-[13px] text-[#6B6B66]">
-                      Daily for best results
-                    </Text>
+                    <Text className="font-outfit text-[13px] text-[#6B6B66]">Facial puffiness</Text>
                   </View>
                   <View className="flex-row items-start gap-x-2">
                     <View className="mt-[6px] h-2 w-2 rounded-full bg-[#3F4D3A]" />
@@ -463,9 +367,12 @@ export default function LymphaticMassageScreen() {
                 </View>
               </View>
               <View
-                className="flex-1 rounded-2xl"
-                style={{ backgroundColor: '#F5F0E8', padding: 12 }}>
-                <Text className="mb-2 font-outfitMedium text-[16px] text-titleTextColor">
+                className="flex-1 rounded-2xl "
+                style={{
+                  backgroundColor: '#F5F0E8',
+                  padding: 12,
+                }}>
+                <Text className="mb-2 font-outfitMedium text-[16px] text-titleTextColor ">
                   Best moments
                 </Text>
                 <View className="gap-2">
@@ -484,9 +391,9 @@ export default function LymphaticMassageScreen() {
                 </View>
               </View>
             </View>
-          </View> */}
+          </View>
 
-          {/* Section 6 - Massage Steps */}
+          {/* Section 5 */}
           <View
             className="mt-5 overflow-hidden bg-backgroundColor p-5"
             style={{
@@ -495,8 +402,9 @@ export default function LymphaticMassageScreen() {
               borderLeftWidth: 1,
               borderRightWidth: 1,
               borderColor: '#FFFFFF66',
-              paddingVertical: 20,
+              paddingVertical: 20, // Keep vertical padding here
             }}>
+            {/* Header Section - Manual padding since parent no longer has horizontal padding */}
             <Text className="font-outfitMedium text-[20px] text-titleTextColor">
               5. Massage Steps
             </Text>
@@ -504,9 +412,9 @@ export default function LymphaticMassageScreen() {
               Always move downwards toward the collarbones.
             </Text>
 
-            {/* Step 1 */}
+            {/* step--1 */}
             <View
-              className="mt-3"
+              className="mt-3 "
               style={{
                 backgroundColor: '#F5F0E899',
                 padding: 10,
@@ -524,8 +432,8 @@ export default function LymphaticMassageScreen() {
                   }}
                   resizeMode="cover"
                 />
-                <View className="flex-1 gap-2">
-                  <View className="flex-row items-start gap-2">
+                <View className="flex-1 gap-2 ">
+                  <View className="flex-row items-start gap-2 ">
                     <IconBadge
                       size={20}
                       style={{
@@ -533,16 +441,20 @@ export default function LymphaticMassageScreen() {
                         borderWidth: 0,
                       }}
                       icon={
-                        <Text className="font-outfitSemi text-[10px]" style={{ color: '#FFFFFF' }}>
+                        <Text
+                          className="font-outfitSemi text-[10px]  "
+                          style={{
+                            color: '#FFFFFF',
+                          }}>
                           1
                         </Text>
                       }
                     />
-                    <Text className="font-outfitMedium text-[13px] text-titleTextColor">
+                    <Text className="font-outfitMedium text-[13px] text-titleTextColor ">
                       Collarbones
                     </Text>
                   </View>
-                  <Text className="flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66]">
+                  <Text className=" flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66] ">
                     Use flat hands, glide from the center of the chest outwards to the shoulders.
                     Repeat 3 times.
                   </Text>
@@ -550,9 +462,9 @@ export default function LymphaticMassageScreen() {
               </View>
             </View>
 
-            {/* Step 2 */}
+            {/* step--2 */}
             <View
-              className="mt-3"
+              className="mt-3 "
               style={{
                 backgroundColor: '#F5F0E899',
                 padding: 10,
@@ -570,8 +482,8 @@ export default function LymphaticMassageScreen() {
                   }}
                   resizeMode="cover"
                 />
-                <View className="flex-1 gap-2">
-                  <View className="flex-row items-start gap-2">
+                <View className="flex-1 gap-2 ">
+                  <View className="flex-row items-start gap-2 ">
                     <IconBadge
                       size={20}
                       style={{
@@ -579,14 +491,18 @@ export default function LymphaticMassageScreen() {
                         borderWidth: 0,
                       }}
                       icon={
-                        <Text className="font-outfitSemi text-[10px]" style={{ color: '#FFFFFF' }}>
+                        <Text
+                          className="font-outfitSemi text-[10px]  "
+                          style={{
+                            color: '#FFFFFF',
+                          }}>
                           2
                         </Text>
                       }
                     />
-                    <Text className="font-outfitMedium text-[13px] text-titleTextColor">Neck</Text>
+                    <Text className="font-outfitMedium text-[13px] text-titleTextColor ">Neck</Text>
                   </View>
-                  <Text className="flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66]">
+                  <Text className=" flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66] ">
                     Sweep downward on both sides of the neck, from behind the ears to the
                     collarbones.
                   </Text>
@@ -594,9 +510,9 @@ export default function LymphaticMassageScreen() {
               </View>
             </View>
 
-            {/* Step 3 */}
+            {/* step--3 */}
             <View
-              className="mt-3"
+              className="mt-3 "
               style={{
                 backgroundColor: '#F5F0E899',
                 padding: 10,
@@ -614,8 +530,8 @@ export default function LymphaticMassageScreen() {
                   }}
                   resizeMode="cover"
                 />
-                <View className="flex-1 gap-2">
-                  <View className="flex-row items-start gap-2">
+                <View className="flex-1 gap-2 ">
+                  <View className="flex-row items-start gap-2 ">
                     <IconBadge
                       size={20}
                       style={{
@@ -623,23 +539,27 @@ export default function LymphaticMassageScreen() {
                         borderWidth: 0,
                       }}
                       icon={
-                        <Text className="font-outfitSemi text-[10px]" style={{ color: '#FFFFFF' }}>
+                        <Text
+                          className="font-outfitSemi text-[10px]  "
+                          style={{
+                            color: '#FFFFFF',
+                          }}>
                           3
                         </Text>
                       }
                     />
-                    <Text className="font-outfitMedium text-[13px] text-titleTextColor">Jaw</Text>
+                    <Text className="font-outfitMedium text-[13px] text-titleTextColor ">Jaw</Text>
                   </View>
-                  <Text className="flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66]">
+                  <Text className=" flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66] ">
                     Use your fingers or knuckles to glide from the chin to the ears.
                   </Text>
                 </View>
               </View>
             </View>
 
-            {/* Step 4 */}
+            {/* step--4 */}
             <View
-              className="mt-3"
+              className="mt-3 "
               style={{
                 backgroundColor: '#F5F0E899',
                 padding: 10,
@@ -657,8 +577,8 @@ export default function LymphaticMassageScreen() {
                   }}
                   resizeMode="cover"
                 />
-                <View className="flex-1 gap-2">
-                  <View className="flex-row items-start gap-2">
+                <View className="flex-1 gap-2 ">
+                  <View className="flex-row items-start gap-2 ">
                     <IconBadge
                       size={20}
                       style={{
@@ -666,23 +586,27 @@ export default function LymphaticMassageScreen() {
                         borderWidth: 0,
                       }}
                       icon={
-                        <Text className="font-outfitSemi text-[10px]" style={{ color: '#FFFFFF' }}>
+                        <Text
+                          className="font-outfitSemi text-[10px]  "
+                          style={{
+                            color: '#FFFFFF',
+                          }}>
                           4
                         </Text>
                       }
                     />
-                    <Text className="font-outfitMedium text-[13px] text-titleTextColor">Face</Text>
+                    <Text className="font-outfitMedium text-[13px] text-titleTextColor ">Face</Text>
                   </View>
-                  <Text className="flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66]">
+                  <Text className=" flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66] ">
                     Glide from the center of the face outwards and downwards toward the lymph nodes.
                   </Text>
                 </View>
               </View>
             </View>
 
-            {/* Step 5 */}
+            {/* step--5 */}
             <View
-              className="mt-3"
+              className="mt-3 "
               style={{
                 backgroundColor: '#F5F0E899',
                 padding: 10,
@@ -700,8 +624,8 @@ export default function LymphaticMassageScreen() {
                   }}
                   resizeMode="cover"
                 />
-                <View className="flex-1 gap-2">
-                  <View className="flex-row items-start gap-2">
+                <View className="flex-1 gap-2 ">
+                  <View className="flex-row items-start gap-2 ">
                     <IconBadge
                       size={20}
                       style={{
@@ -709,25 +633,29 @@ export default function LymphaticMassageScreen() {
                         borderWidth: 0,
                       }}
                       icon={
-                        <Text className="font-outfitSemi text-[10px]" style={{ color: '#FFFFFF' }}>
+                        <Text
+                          className="font-outfitSemi text-[10px]  "
+                          style={{
+                            color: '#FFFFFF',
+                          }}>
                           5
                         </Text>
                       }
                     />
-                    <Text className="font-outfitMedium text-[13px] text-titleTextColor">
+                    <Text className="font-outfitMedium text-[13px] text-titleTextColor ">
                       Under Eyes
                     </Text>
                   </View>
-                  <Text className="flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66]">
+                  <Text className=" flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66] ">
                     Gently sweep from the inner corner of the eye to the temples.
                   </Text>
                 </View>
               </View>
             </View>
 
-            {/* Step 6 */}
+            {/* step--6 */}
             <View
-              className="mt-3"
+              className="mt-3 "
               style={{
                 backgroundColor: '#F5F0E899',
                 padding: 10,
@@ -745,8 +673,8 @@ export default function LymphaticMassageScreen() {
                   }}
                   resizeMode="cover"
                 />
-                <View className="flex-1 gap-2">
-                  <View className="flex-row items-start gap-2">
+                <View className="flex-1 gap-2 ">
+                  <View className="flex-row items-start gap-2 ">
                     <IconBadge
                       size={20}
                       style={{
@@ -754,16 +682,20 @@ export default function LymphaticMassageScreen() {
                         borderWidth: 0,
                       }}
                       icon={
-                        <Text className="font-outfitSemi text-[10px]" style={{ color: '#FFFFFF' }}>
+                        <Text
+                          className="font-outfitSemi text-[10px]  "
+                          style={{
+                            color: '#FFFFFF',
+                          }}>
                           6
                         </Text>
                       }
                     />
-                    <Text className="font-outfitMedium text-[13px] text-titleTextColor">
+                    <Text className="font-outfitMedium text-[13px] text-titleTextColor ">
                       Scalp (optional)
                     </Text>
                   </View>
-                  <Text className="flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66]">
+                  <Text className=" flex-1 flex-wrap font-outfit text-[10px] text-[#6B6B66] ">
                     Use your fingertips to make small circles on the scalp. This helps detox and
                     stimulate circulation.
                   </Text>
@@ -773,15 +705,19 @@ export default function LymphaticMassageScreen() {
 
             {/* Footer Link Section */}
             <View
-              className="mt-4 flex-row items-center justify-between bg-[#EEF1E8] px-4 py-3"
+              className="mt-4 flex-row items-center justify-between bg-[#EEF1E8] px-[16px] py-[14px]"
               style={{ borderRadius: 16 }}>
-              <View className="flex-1 flex-row items-center gap-3 pr-2" style={{ marginRight: 40 }}>
+              <View
+                className="flex-1 flex-row items-center gap-3 pr-2 "
+                style={{
+                  marginRight: 40,
+                }}>
                 <IconBadge
                   style={{ backgroundColor: '#FFFFFF99' }}
                   size={28}
                   icon={<SunIcon size={16} color="#3F4D3A" />}
                 />
-                <Text className="font-outfit text-[13px] text-[#6B6B66]">
+                <Text className="  font-outfit text-[13px] text-[#6B6B66]">
                   Be gentle. Light pressure is enough. Consistency is the key.
                 </Text>
               </View>
@@ -789,7 +725,7 @@ export default function LymphaticMassageScreen() {
             </View>
           </View>
 
-          {/* Section 7 - After the massage */}
+          {/* Section 6 */}
           <View
             className="mt-5 overflow-hidden bg-backgroundColor"
             style={{
@@ -800,6 +736,7 @@ export default function LymphaticMassageScreen() {
               borderColor: '#FFFFFF66',
               paddingVertical: 20,
             }}>
+            {/* Header Section */}
             <View className="px-5">
               <Text className="font-outfitMedium text-[20px] text-titleTextColor">
                 6. After the massage
@@ -809,11 +746,13 @@ export default function LymphaticMassageScreen() {
               </Text>
             </View>
 
+            {/* Slideable Icons Section - Fixed spacing */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }} // Use gap for consistent spacing
               className="mt-6">
+              {/* Item 1 - Fixed width ensures consistent spacing */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<FlameIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -821,6 +760,7 @@ export default function LymphaticMassageScreen() {
                 </Text>
               </View>
 
+              {/* Item 2 */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<WaterGlassIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -828,6 +768,7 @@ export default function LymphaticMassageScreen() {
                 </Text>
               </View>
 
+              {/* Item 3 */}
               <View className="w-[80px] items-center">
                 <IconBadge size={64} icon={<MoonIcon width={24} height={24} />} />
                 <Text className="mt-2 text-center font-outfit text-[11px] leading-4 text-[#6B6B66]">
@@ -836,20 +777,23 @@ export default function LymphaticMassageScreen() {
               </View>
             </ScrollView>
 
+            {/* Footer Link Section */}
             <View className="mt-6 px-5">
               <View
                 className="flex-row items-center justify-between bg-[#EEF1E8] px-4 py-3"
                 style={{ borderRadius: 16 }}>
                 <View
-                  className="flex-1 flex-row items-center gap-3 pr-2"
-                  style={{ marginRight: 40 }}>
+                  className="flex-1 flex-row items-center gap-3 pr-2 "
+                  style={{
+                    marginRight: 40,
+                  }}>
                   <IconBadge
                     style={{ backgroundColor: '#FFFFFF99' }}
                     size={28}
                     icon={<WaterGlassIcon size={16} color="#3F4D3A" />}
                   />
-                  <Text className="font-outfit text-[13px] text-[#6B6B66]">
-                    Drink water to help flush out toxins.
+                  <Text className="  font-outfit text-[13px] text-[#6B6B66]">
+                    Be gentle. Light pressure is enough. Consistency is the key.
                   </Text>
                 </View>
                 <Ionicons name="arrow-forward" size={16} color="#3F4D3A" />
@@ -857,9 +801,9 @@ export default function LymphaticMassageScreen() {
             </View>
           </View>
 
-          {/* Section 8 - Key Benefits */}
+          {/* Section 7 */}
           <View
-            className="relative mt-5 overflow-hidden bg-backgroundColor p-5"
+            className="relative mt-6 bg-backgroundColor p-5 "
             style={{
               borderRadius: 24,
               borderWidth: 2,
@@ -889,7 +833,7 @@ export default function LymphaticMassageScreen() {
                 style={{ marginTop: 12, backgroundColor: '#EEF1E8' }}
               />
               <Text className="mt-3 font-outfit text-[13px] text-subTitleTextColor">
-                Reduces puffiness and fluid retention
+                Your body is now eliminating toxins.
               </Text>
             </View>
             <View className="flex-row items-center gap-2">
@@ -922,21 +866,10 @@ export default function LymphaticMassageScreen() {
                 Reduces dark circles
               </Text>
             </View>
-            <View className="flex-row items-center gap-2">
-              <IconBadge
-                size={20}
-                icon={<Ionicons name="checkmark" size={12} color={'#3F4D3A'} />}
-                style={{ marginTop: 12, backgroundColor: '#EEF1E8' }}
-              />
-              <Text className="mt-3 font-outfit text-[13px] text-subTitleTextColor">
-                Boosts immune system
-              </Text>
-            </View>
           </View>
 
-          {/* Motivational Text */}
           <Text
-            className="mt-6 flex-1 text-center font-didot"
+            className="mt-6 flex-1 text-center font-didot "
             style={{
               color: '#2A2A2A',
               fontSize: 18,
@@ -944,7 +877,6 @@ export default function LymphaticMassageScreen() {
             Be consistent, be gentle, be patient.
           </Text>
 
-          {/* Footer Tips */}
           <View className="mt-5">
             <ScrollView
               horizontal
@@ -952,6 +884,7 @@ export default function LymphaticMassageScreen() {
               contentContainerStyle={{ paddingHorizontal: 20 }}
               className="-mx-5">
               <View className="flex-row gap-4">
+                {/* Item 1 - Take care of your lymph */}
                 <View className="items-center" style={{ width: 85 }}>
                   <IconBadge
                     style={{ backgroundColor: '#FFFFFF' }}
@@ -963,6 +896,7 @@ export default function LymphaticMassageScreen() {
                   </Text>
                 </View>
 
+                {/* Item 2 - Listen to your body */}
                 <View className="items-center" style={{ width: 85 }}>
                   <IconBadge
                     style={{ backgroundColor: '#FFFFFF' }}
@@ -974,6 +908,7 @@ export default function LymphaticMassageScreen() {
                   </Text>
                 </View>
 
+                {/* Item 3 - Stay hydrated */}
                 <View className="items-center" style={{ width: 85 }}>
                   <IconBadge
                     style={{ backgroundColor: '#FFFFFF' }}
@@ -985,6 +920,7 @@ export default function LymphaticMassageScreen() {
                   </Text>
                 </View>
 
+                {/* Item 4 - Glow naturally */}
                 <View className="items-center" style={{ width: 85 }}>
                   <IconBadge
                     style={{ backgroundColor: '#FFFFFF' }}

@@ -60,6 +60,7 @@ export const useHomeScreen = () => {
           break;
         case 'Lymphatic Massage':
         case 'Lymphatic':
+          // router.push('/(flow)/lymphatic-massage');
           router.push('/(flow)/lymphatic-massage');
           break;
         case 'Articles':

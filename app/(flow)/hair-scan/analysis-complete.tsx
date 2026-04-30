@@ -31,6 +31,8 @@ import {
 } from '@/components/scans/FoodRecommendationSection';
 import { KeyNutrientsSection, Nutrient } from '@/components/scans/KeyNutrientsSection';
 import { HydrationTargetCard } from '@/components/scans/HydrationTargetCard';
+import { RecommendedArticles } from '@/components/scans/RecommendedArticles';
+import { SAMPLE_ARTICLES } from '@/constants/sampleArticles';
 
 // Hair analysis stats
 const HAIR_STATS = [
@@ -260,6 +262,31 @@ const HairAnalysisCompleteScreen = () => {
     },
   ];
 
+  const getRecommendedHairArticles = () => {
+    // Filter articles relevant to hair/scalp and take first 2
+    const articlesToShow = SAMPLE_ARTICLES.filter(
+      (article) =>
+        article.title.toLowerCase().includes('hair') ||
+        article.category.toLowerCase().includes('hair') ||
+        article.title.toLowerCase().includes('scalp') ||
+        article.description.toLowerCase().includes('hair')
+    ).slice(0, 2); // Maximum 2 articles
+
+    // If no hair articles, take first 2 from all
+    const finalArticles = articlesToShow.length > 0 ? articlesToShow : SAMPLE_ARTICLES.slice(0, 2);
+
+    return finalArticles.map((article) => ({
+      id: article.id,
+      title: article.title,
+      description: article.description,
+      readTime: article.readTime,
+      category: article.category,
+      imageUrl: { uri: article.imageUrl },
+    }));
+  };
+
+  const recommendedArticles = getRecommendedHairArticles();
+
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader title="Hair Analysis Complete" height={50} backButton />
@@ -379,6 +406,22 @@ const HairAnalysisCompleteScreen = () => {
             iconSize={20}
             iconColor="#A68A61"
           />
+
+          {/* Recommended Articles Section */}
+          {recommendedArticles.length > 0 && (
+            <RecommendedArticles
+              articles={recommendedArticles}
+              title="Recommended for You"
+              showIcon={true}
+              onArticlePress={(article) => {
+                console.log('Article pressed:', article.title);
+                router.push({
+                  pathname: '/(flow)/learn-article/[id]',
+                  params: { id: article.id },
+                });
+              }}
+            />
+          )}
 
           {/* Button */}
           <PrimaryButton

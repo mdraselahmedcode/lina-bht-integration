@@ -108,3 +108,7 @@ export { BarCodeScanningIcon } from './BarcodeScanningIcon';
 export { TrashBinIcon } from './TrashBinIcon';
 
 export { CalendarIcon } from './CalendarIcon';
+
+export { FaceIcon } from './FaceIcon';
+export { WaterGlassIcon } from './WaterGlassIcon';
+export { EarIcon } from './EarIcon';

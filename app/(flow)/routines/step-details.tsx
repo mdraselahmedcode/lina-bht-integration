@@ -232,10 +232,10 @@ export default function RoutineStepDetailsScreen() {
             onReady={() => console.log('Video is ready to play!')}
             onError={() => alert('Could not load the video.')}
           />
+          <Text className="mb-2 font-outfitMedium text-[18px] text-titleTextColor ">
+            Drawing Up Injectable Medications
+          </Text>
           <View className="flex-row items-center gap-3">
-            <Text className="font-outfitMedium text-[18px] text-titleTextColor ">
-              Drawing Up Injectable Medications
-            </Text>
             <View className="flex-row items-center gap-1">
               <Ionicons name="time-outline" size={18} />
               <Text className="font-outfit text-[12px] text-[#2E2117] ">3 min read</Text>

@@ -25,7 +25,8 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
       onPress(tutorial);
     } else {
       router.push({
-        pathname: '/(flow)/tutorial-details',
+        // pathname: '/(flow)/tutorial-details',
+        pathname: '/(flow)/lymphatic-massage/details',
         params: { id: tutorial.id },
       });
     }

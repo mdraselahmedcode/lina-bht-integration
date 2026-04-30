@@ -30,7 +30,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to update your profile picture.",
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take a profile photo."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
