@@ -1,7 +1,6 @@
-/* eslint-disable import/no-unresolved */
+// app/(flow)/ai-assistant/index.tsx
 import {
   ScrollView,
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -10,8 +9,10 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Animated,
+  Modal,
 } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,189 +25,306 @@ import { useScreenReady } from '@/hooks/useScreenReady';
 import ErrorScreen from '@/components/errors/ErrorScreen';
 import { useRouter } from 'expo-router';
 
+import { useSendMessageSyncMutation } from '@/store/api/chatApi';
+import { useChatStream } from '@/hooks/useChatStream';
+import { MarkdownText } from '@/components/chat/MarkdownText';
+import ClearChatModal from '@/components/ui/ClearChatModal';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface Message {
   id: string;
   text: string;
   isUser: boolean;
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
-const AiAssistantScreen = () => {
-  const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const inputRef = useRef<TextInput>(null);
-  const insets = useSafeAreaInsets();
-  const { showError } = useToast();
+const WELCOME_MESSAGE: Message = {
+  id: 'welcome',
+  text: "Hello! I'm your **Gixy AI** assistant. 👋\n\nI can help you with:\n- Skincare advice tailored to your profile\n- Ingredient guidance\n- Routine building\n\nHow can I help you today?",
+  isUser: false,
+  timestamp: new Date(),
+};
 
-  // Screen ready state for smooth transitions
-  const { isRendering, isContentReady, renderError } = useScreenReady({
-    dependencies: [],
-    delay: 100,
-    initialReady: false,
-  });
+const STORAGE_KEY = 'chat_history_v2';
+const MAX_STORED_MESSAGES = 100;
 
-  // Load messages on mount
+// ─── Typing dots indicator ────────────────────────────────────────────────────
+
+function TypingIndicator() {
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
+
   useEffect(() => {
-    loadMessages();
+    const animate = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0.3, duration: 350, useNativeDriver: true }),
+        ])
+      ).start();
+
+    animate(dot1, 0);
+    animate(dot2, 150);
+    animate(dot3, 300);
   }, []);
 
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (!isLoading) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages, isTyping]);
-
-  const loadMessages = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('chat_history');
-      if (saved) {
-        const parsedMessages = JSON.parse(saved);
-        const messagesWithDates = parsedMessages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }));
-        setMessages(messagesWithDates);
-      } else {
-        setMessages([
-          {
-            id: '1',
-            text: 'Hello! I am your Gixy AI assistant. How can I help you with your skincare journey today?',
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      setMessages([
-        {
-          id: '1',
-          text: 'Hello! I am your Gixy AI assistant. How can I help you with your skincare journey today?',
-          isUser: false,
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
+  const dotStyle = {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2E211799',
+    marginHorizontal: 2,
   };
 
-  const saveMessages = async (newMessages: Message[]) => {
-    try {
-      await AsyncStorage.setItem('chat_history', JSON.stringify(newMessages));
-    } catch (error) {
-      console.error('Error saving messages:', error);
-    }
-  };
-
-  const getAIResponse = (userInput: string): string => {
-    const input = userInput.toLowerCase();
-
-    if (input.includes('acne') || input.includes('pimple') || input.includes('breakout')) {
-      return "I understand you're concerned about acne. Consistent cleansing, using non-comedogenic products, and incorporating ingredients like salicylic acid can help. Would you like me to recommend a routine?";
-    } else if (input.includes('dry') || input.includes('flaky') || input.includes('dehydrated')) {
-      return "Dry skin needs hydration! Look for products with hyaluronic acid, ceramides, and glycerin. Also, don't forget to drink plenty of water! Would you like product recommendations?";
-    } else if (input.includes('oily') || input.includes('greasy') || input.includes('shine')) {
-      return 'Oily skin benefits from gentle cleansing, niacinamide, and lightweight moisturizers. Avoid harsh products that strip natural oils. Need help building a routine?';
-    } else if (input.includes('routine') || input.includes('step') || input.includes('regimen')) {
-      return 'A basic skincare routine includes: cleanser, moisturizer, and sunscreen in the morning. At night, add a treatment step like serum or retinol. Want me to create a personalized routine for you?';
-    } else if (input.includes('product') || input.includes('recommend')) {
-      return "I can help with product recommendations! What's your skin type and main concern? (e.g., dry, oily, acne, aging)";
-    } else if (input.includes('sunscreen') || input.includes('spf')) {
-      return 'Sunscreen is crucial! Look for SPF 30 or higher, broad-spectrum protection. Apply as the last step in your morning routine and reapply every 2 hours if outdoors.';
-    } else if (input.includes('thank')) {
-      return "You're welcome! I'm here to help with any skincare questions you have. Feel free to ask anything! 💫";
-    }
-    return 'Thank you for sharing! I can help you with skincare advice, product recommendations, or routine building. What specific concern would you like to address today?';
-  };
-
-  const handleSend = async () => {
-    if (!inputText.trim() || isTyping) return;
-
-    if (Platform.OS !== 'web') {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
-      isUser: true,
-      timestamp: new Date(),
-    };
-
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    saveMessages(updatedMessages);
-    setInputText('');
-    setIsTyping(true);
-
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: getAIResponse(inputText.trim()),
-        isUser: false,
-        timestamp: new Date(),
-      };
-      const finalMessages = [...updatedMessages, aiResponse];
-      setMessages(finalMessages);
-      saveMessages(finalMessages);
-      setIsTyping(false);
-    }, 1000);
-  };
-
-  const clearChat = async () => {
-    if (Platform.OS !== 'web') {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-
-    const welcomeMessage: Message = {
-      id: '1',
-      text: 'Hello! I am your Gixy AI assistant. How can I help you with your skincare journey today?',
-      isUser: false,
-      timestamp: new Date(),
-    };
-    setMessages([welcomeMessage]);
-    saveMessages([welcomeMessage]);
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const TypingIndicator = () => (
-    <View className="mb-3 items-start">
+  return (
+    <View style={{ marginBottom: 12, alignItems: 'flex-start' }}>
       <BorderlessShadowCard
         b_tl={2}
         b_tr={16}
         b_bl={16}
         b_br={16}
-        style={{
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-          backgroundColor: '#FFFFFF',
-        }}>
-        <View className="flex-row gap-1">
-          <View className="h-2 w-2 rounded-full bg-gray-400" style={{ opacity: 0.6 }} />
-          <View className="h-2 w-2 rounded-full bg-gray-400" style={{ opacity: 0.8 }} />
-          <View className="h-2 w-2 rounded-full bg-gray-400" style={{ opacity: 1 }} />
+        style={{ paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#FFFFFF' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Animated.View style={[dotStyle, { opacity: dot1 }]} />
+          <Animated.View style={[dotStyle, { opacity: dot2 }]} />
+          <Animated.View style={[dotStyle, { opacity: dot3 }]} />
         </View>
       </BorderlessShadowCard>
     </View>
   );
+}
 
-  const handleRetry = () => {
-    router.replace('/(flow)/ai-assistant');
+// ─── Message bubble ───────────────────────────────────────────────────────────
+
+function MessageBubble({ message }: { message: Message }) {
+  const isUser = message.isUser;
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <View style={{ marginBottom: 12, alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+      <BorderlessShadowCard
+        b_tl={isUser ? 16 : 2}
+        b_tr={isUser ? 2 : 16}
+        b_bl={16}
+        b_br={16}
+        style={{
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          backgroundColor: isUser ? '#7A8B6A' : '#FFFFFF',
+          maxWidth: '85%',
+        }}>
+        {isUser ? (
+          <Text
+            style={{
+              fontFamily: 'Outfit-Regular',
+              fontSize: 14,
+              lineHeight: 22,
+              color: '#FFFFFF',
+            }}>
+            {message.text}
+          </Text>
+        ) : (
+          <MarkdownText content={message.text} color="#2E2117" fontSize={14} />
+        )}
+
+        {!message.isStreaming && (
+          <Text
+            style={{
+              marginTop: 4,
+              fontFamily: 'Outfit-Regular',
+              fontSize: 10,
+              color: isUser ? '#FFFFFFB2' : '#2E211766',
+              textAlign: 'right',
+            }}>
+            {formatTime(message.timestamp)}
+          </Text>
+        )}
+      </BorderlessShadowCard>
+    </View>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
+const AiAssistantScreen = () => {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { showError } = useToast();
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [showClearModal, setShowClearModal] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
+
+  const { streamMessage, cancelStream } = useChatStream();
+  const [sendSync] = useSendMessageSyncMutation();
+
+  const { isRendering, renderError } = useScreenReady({
+    dependencies: [],
+    delay: 100,
+    initialReady: false,
+  });
+
+  // ── Persistence ──────────────────────────────────────────────────────────
+
+  const loadMessages = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed: any[] = JSON.parse(saved);
+        setMessages(
+          parsed.map((m) => ({ ...m, timestamp: new Date(m.timestamp), isStreaming: false }))
+        );
+      } else {
+        setMessages([WELCOME_MESSAGE]);
+      }
+    } catch {
+      setMessages([WELCOME_MESSAGE]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
-  // Show initial render loading (useScreenReady)
-  if (isRendering) {
+  const persistMessages = useCallback(async (msgs: Message[]) => {
+    try {
+      const toStore = msgs.filter((m) => !m.isStreaming).slice(-MAX_STORED_MESSAGES);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    loadMessages();
+  }, []);
+
+  useEffect(() => {
+    if (!isLoadingHistory) {
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 80);
+    }
+  }, [messages, isWaiting]);
+
+  // ── Send ─────────────────────────────────────────────────────────────────
+
+  const isBusy = isWaiting || isStreaming;
+
+  const handleSend = async () => {
+    const text = inputText.trim();
+    if (!text || isBusy) return;
+
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const userMsg: Message = {
+      id: `user_${Date.now()}`,
+      text,
+      isUser: true,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => {
+      const next = [...prev, userMsg];
+      persistMessages(next);
+      return next;
+    });
+    setInputText('');
+    setIsWaiting(true);
+
+    const aiMsgId = `ai_${Date.now()}`;
+    streamingMessageIdRef.current = aiMsgId;
+
+    await streamMessage(text, {
+      onChunk: (chunk) => {
+        setIsWaiting(false);
+        setIsStreaming(true);
+
+        setMessages((prev) => {
+          const existing = prev.find((m) => m.id === aiMsgId);
+          if (existing) {
+            return prev.map((m) => (m.id === aiMsgId ? { ...m, text: m.text + chunk } : m));
+          }
+          return [
+            ...prev,
+            { id: aiMsgId, text: chunk, isUser: false, timestamp: new Date(), isStreaming: true },
+          ];
+        });
+      },
+
+      onDone: () => {
+        setIsWaiting(false);
+        setIsStreaming(false);
+        setMessages((prev) => {
+          const next = prev.map((m) => (m.id === aiMsgId ? { ...m, isStreaming: false } : m));
+          persistMessages(next);
+          return next;
+        });
+        streamingMessageIdRef.current = null;
+      },
+
+      onError: () => {
+        setIsWaiting(false);
+        setIsStreaming(false);
+        streamingMessageIdRef.current = null;
+        setMessages((prev) => prev.filter((m) => m.id !== aiMsgId || m.text.length > 0));
+        handleSyncFallback(text);
+      },
+    });
+  };
+
+  const handleSyncFallback = async (text: string) => {
+    setIsWaiting(true);
+    try {
+      const result = await sendSync({ message: text }).unwrap();
+      const aiMsg: Message = {
+        id: `ai_sync_${Date.now()}`,
+        text: result.reply,
+        isUser: false,
+        timestamp: new Date(),
+        isStreaming: false,
+      };
+      setMessages((prev) => {
+        const next = [...prev, aiMsg];
+        persistMessages(next);
+        return next;
+      });
+    } catch (err: any) {
+      const detail = err?.data?.detail || err?.data?.message;
+      showError(detail || 'Something went wrong. Please try again.');
+    } finally {
+      setIsWaiting(false);
+    }
+  };
+
+  const handleClearChat = () => {
+    if (isBusy) return;
+    setShowClearModal(true);
+  };
+
+  const confirmClearChat = async () => {
+    setShowClearModal(false);
+    cancelStream();
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setMessages([WELCOME_MESSAGE]);
+    setIsWaiting(false);
+    setIsStreaming(false);
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  };
+
+  // ── Render guards ────────────────────────────────────────────────────────
+
+  if (isRendering || isLoadingHistory) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
         <LoadingScreen loadingText="Loading your skincare companion..." />
@@ -214,36 +332,26 @@ const AiAssistantScreen = () => {
     );
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-        <CustomHeader title="Wellness" height={50} backButton={true} />
-        <ErrorScreen message={renderError} onRetry={handleRetry} />
+        <CustomHeader title="AI Assistant" height={50} backButton={true} />
+        <ErrorScreen message={renderError} onRetry={() => router.replace('/(flow)/ai-assistant')} />
       </SafeAreaView>
     );
   }
 
+  // ── UI ───────────────────────────────────────────────────────────────────
+
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
-      <CustomHeader
-        title="AI Assistant"
-        height={50}
-        backButton={true}
-        // rightIcon={
-        //   <CircularIconButton
-        //     size={40}
-        //     icon={<Ionicons name="trash-outline" size={20} color="#361A0D" />}
-        //     onPress={clearChat}
-        //   />
-        // }
-      />
+      <CustomHeader title="AI Assistant" height={50} backButton={true} />
+      {/* <CustomHeader title="AI Assistant" height={50} backButton backRoute="/(main)" /> */}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-        {/* Messages Container */}
+        keyboardVerticalOffset={0}>
         <SafeAreaView edges={[]} className="flex-1 px-container" style={{ paddingBottom: 0 }}>
           <BorderlessShadowCard
             b_tl={24}
@@ -258,77 +366,57 @@ const AiAssistantScreen = () => {
               marginTop: 12,
               flex: 1,
             }}>
-            {/* AI Header */}
-            <View className="mb-4 flex-row items-center gap-3 border-b border-[#2E2117]/10 px-6 pb-4">
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: '#2E211719',
+                paddingHorizontal: 24,
+                paddingBottom: 16,
+                marginBottom: 4,
+              }}>
               <Image
                 source={require('@/assets/images/ai_floating_logo.png')}
                 style={{ width: 50, height: 50 }}
                 resizeMode="contain"
               />
-              <View className="flex-1">
-                <Text
-                  className="text-start font-outfitMedium text-[24px]"
-                  style={{ color: '#2A2118' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 24, color: '#2A2118' }}>
                   Gixy AI
                 </Text>
-                <View className="flex-row items-center gap-1">
-                  <View className="h-2 w-2 rounded-full bg-green-500" />
-                  <Text
-                    className="text-start font-outfitMedium text-[12px]"
-                    style={{ color: '#77B839' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View
+                    style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }}
+                  />
+                  <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 12, color: '#77B839' }}>
                     Online
                   </Text>
                 </View>
               </View>
+              <TouchableOpacity
+                onPress={handleClearChat}
+                disabled={isBusy}
+                style={{ opacity: isBusy ? 0.4 : 1, paddingHorizontal: 4 }}>
+                <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 13, color: '#EF4444' }}>
+                  Clear
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Messages List */}
             <ScrollView
               ref={scrollViewRef}
               showsVerticalScrollIndicator={false}
-              className="flex-1"
-              contentContainerStyle={{
-                paddingBottom: 20,
-                paddingHorizontal: 24,
-                flexGrow: 1,
-              }}>
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: 24, flexGrow: 1 }}>
               {messages.map((message) => (
-                <View
-                  key={message.id}
-                  className={`mb-3 ${message.isUser ? 'items-end' : 'items-start'}`}>
-                  <BorderlessShadowCard
-                    b_tl={message.isUser ? 16 : 2}
-                    b_tr={message.isUser ? 2 : 16}
-                    b_bl={16}
-                    b_br={16}
-                    style={{
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      backgroundColor: message.isUser ? '#7A8B6A' : '#FFFFFF',
-                      maxWidth: '85%',
-                    }}>
-                    <Text
-                      className="font-outfit text-[14px] leading-5"
-                      style={{ color: message.isUser ? '#FFFFFF' : '#2E2117' }}>
-                      {message.text}
-                    </Text>
-                    <Text
-                      className="mt-1 font-outfit text-[10px]"
-                      style={{
-                        color: message.isUser ? '#FFFFFFCC' : '#2E211766',
-                        textAlign: 'right',
-                      }}>
-                      {formatTime(message.timestamp)}
-                    </Text>
-                  </BorderlessShadowCard>
-                </View>
+                <MessageBubble key={message.id} message={message} />
               ))}
-
-              {isTyping && <TypingIndicator />}
+              {isWaiting && <TypingIndicator />}
             </ScrollView>
           </BorderlessShadowCard>
 
-          {/* Input Container - Fixed with proper bottom spacing using SafeAreaView */}
           <View style={{ marginBottom: insets.bottom }}>
             <BorderlessShadowCard
               b_tl={0}
@@ -341,37 +429,57 @@ const AiAssistantScreen = () => {
                 borderWidth: 1,
                 borderColor: '#FFFFFF',
               }}>
-              <View className="flex-row items-center gap-2">
-                <View className="flex-1 rounded-full bg-white px-4 py-2">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{
+                    flex: 1,
+                    borderRadius: 100,
+                    backgroundColor: '#FFFFFF',
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                  }}>
                   <TextInput
                     ref={inputRef}
                     value={inputText}
                     onChangeText={setInputText}
                     placeholder="Ask about your skin..."
                     placeholderTextColor="#2E211766"
-                    className="font-outfit text-[14px]"
-                    style={{ color: '#2E2117', padding: 0, maxHeight: 100 }}
+                    style={{
+                      fontFamily: 'Outfit-Regular',
+                      fontSize: 14,
+                      color: '#2E2117',
+                      padding: 0,
+                      maxHeight: 100,
+                    }}
                     multiline
-                    numberOfLines={4}
                     returnKeyType="send"
+                    blurOnSubmit={false}
                     onSubmitEditing={handleSend}
+                    editable={!isBusy}
                   />
                 </View>
 
                 <TouchableOpacity
-                  onPress={handleSend}
-                  disabled={!inputText.trim() || isTyping}
+                  onPress={isBusy ? cancelStream : handleSend}
                   activeOpacity={0.8}
                   style={{
                     width: 44,
                     height: 44,
                     borderRadius: 22,
-                    backgroundColor: inputText.trim() && !isTyping ? '#7A8B6A' : '#2E21173D',
+                    backgroundColor: isBusy
+                      ? '#EF444466'
+                      : inputText.trim()
+                        ? '#7A8B6A'
+                        : '#2E21173D',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                  {isTyping ? (
+                  {isWaiting ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : isStreaming ? (
+                    <View
+                      style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#FFFFFF' }}
+                    />
                   ) : (
                     <SendButtonIcon size={18} color="#FFFFFF" />
                   )}
@@ -381,10 +489,14 @@ const AiAssistantScreen = () => {
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <ClearChatModal
+        visible={showClearModal}
+        onConfirm={confirmClearChat}
+        onClose={() => setShowClearModal(false)}
+      />
     </SafeAreaView>
   );
 };
 
 export default AiAssistantScreen;
-
-const styles = StyleSheet.create({});
