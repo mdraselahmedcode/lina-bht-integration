@@ -1,141 +1,134 @@
 // hooks/useAuth.ts
-import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setCredentials,
+  clearCredentials,
+  selectIsAuthenticated,
+  selectCurrentUser,
+} from '@/store/slices/authSlice';
+import { SignInResponse } from '@/store/api/authApi';
+import { baseApi } from '@/store/api/baseApi';
 
 export const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useAppDispatch();
   const router = useRouter();
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const user = useAppSelector(selectCurrentUser);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const rehydrate = async () => {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
-      setIsAuthenticated(!!token);
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setIsLoading(false);
+      const accessToken = await AsyncStorage.getItem('access_token');
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      const userRaw = await AsyncStorage.getItem('user');
+
+      if (accessToken && userRaw) {
+        const user = JSON.parse(userRaw);
+        dispatch(setCredentials({ user, accessToken, refreshToken: refreshToken || '' }));
+
+        // ✅ If onboarding not marked complete locally, re-check from API
+        if (!user.onboarding_completed) {
+          try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/profile`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const profileData = await response.json();
+            if (profileData?.onboarding?.onboarding_completed) {
+              const updatedUser = { ...user, onboarding_completed: true };
+              await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+              dispatch(
+                setCredentials({ user: updatedUser, accessToken, refreshToken: refreshToken || '' })
+              );
+            }
+          } catch {
+            // Silent fail — use cached value
+          }
+        }
+      }
+    } catch {
+      // Silent fail
     }
   };
 
-  const login = async (token: string, userData?: any) => {
-    try {
-      await AsyncStorage.setItem('auth_token', token);
-      if (userData?.email) {
-        await AsyncStorage.setItem('user_email', userData.email);
-      }
-      setIsAuthenticated(true);
-      // Use replace to clear navigation stack
+  const persistAndLogin = async (data: SignInResponse) => {
+    await AsyncStorage.multiSet([
+      ['access_token', data.access_token],
+      ['refresh_token', data.refresh_token],
+      ['user', JSON.stringify(data.user)],
+    ]);
+
+    dispatch(
+      setCredentials({
+        user: data.user,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      })
+    );
+
+    if (!data.user.onboarding_completed) {
+      router.replace('/(questionnaire)/life-phase');
+    } else {
       router.replace('/(main)');
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
+    }
+  };
+
+  const updateUser = async (updatedUser: Partial<typeof user>) => {
+    try {
+      const userRaw = await AsyncStorage.getItem('user');
+      if (userRaw) {
+        const existingUser = JSON.parse(userRaw);
+        const merged = { ...existingUser, ...updatedUser };
+        await AsyncStorage.setItem('user', JSON.stringify(merged));
+        dispatch(
+          setCredentials({
+            user: merged,
+            accessToken: (await AsyncStorage.getItem('access_token')) || '',
+            refreshToken: (await AsyncStorage.getItem('refresh_token')) || '',
+          })
+        );
+      }
+    } catch {
+      // Silent fail
     }
   };
 
   const logout = async () => {
     try {
-      // Clear all auth-related data
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('user_email');
-      await AsyncStorage.removeItem('user_data'); // If you store user data
+      // ✅ Get refresh token before clearing storage
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
 
-      // Clear any routine progress if you want to reset on logout
-      // await AsyncStorage.removeItem('routineProgress');
-      // await AsyncStorage.removeItem('customRoutineSteps');
-
-      setIsAuthenticated(false);
-
-      // Use replace to clear navigation stack and prevent going back
-      router.replace('/(auth)/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      throw error;
+      // ✅ Call signout API — fire and forget, don't block logout on failure
+      if (refreshToken) {
+        try {
+          await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/signout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${await AsyncStorage.getItem('access_token')}`,
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+        } catch {
+          // API call failed — still proceed with local logout
+        }
+      }
+    } finally {
+      // ✅ Always clear local state regardless of API success/failure
+      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
+      dispatch(clearCredentials());
+      // ✅ Reset all RTK Query cache
+      dispatch(baseApi.util.resetApiState());
+      router.replace('/(onboarding)');
     }
   };
 
   return {
     isAuthenticated,
-    isLoading,
-    login,
+    user,
+    rehydrate,
+    persistAndLogin,
+    updateUser,
     logout,
-    checkAuth,
   };
 };
-
-// // hooks/useAuth.ts (Combined - This is the only one you need)
-// import { useState, useEffect } from 'react';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { useRouter } from 'expo-router';
-
-// export const useAuth = () => {
-//   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
-//   const [isAuthenticated, setIsAuthenticated] = useState(false);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const router = useRouter();
-
-//   // Check auth state on mount
-//   useEffect(() => {
-//     checkAuthState();
-//   }, []);
-
-//   const checkAuthState = async () => {
-//     try {
-//       const onboardingValue = await AsyncStorage.getItem('hasSeenOnboarding');
-//       setHasSeenOnboarding(onboardingValue === 'true');
-
-//       const token = await AsyncStorage.getItem('auth_token');
-//       setIsAuthenticated(!!token);
-//     } catch (error) {
-//       console.warn('Error loading app data:', error);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const login = async (token: string, userData?: any) => {
-//     try {
-//       await AsyncStorage.setItem('auth_token', token);
-//       if (userData?.email) {
-//         await AsyncStorage.setItem('user_email', userData.email);
-//       }
-//       setIsAuthenticated(true);
-//       router.replace('/(main)');
-//     } catch (error) {
-//       console.error('Login failed:', error);
-//       throw error;
-//     }
-//   };
-
-//   const logout = async () => {
-//     try {
-//       await AsyncStorage.removeItem('auth_token');
-//       await AsyncStorage.removeItem('user_email');
-//       setIsAuthenticated(false);
-//       router.replace('/(auth)/login');
-//     } catch (error) {
-//       console.error('Logout failed:', error);
-//       throw error;
-//     }
-//   };
-
-//   const completeOnboarding = async () => {
-//     await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-//     setHasSeenOnboarding(true);
-//   };
-
-//   return {
-//     hasSeenOnboarding,
-//     isAuthenticated,
-//     isLoading,
-//     login,
-//     logout,
-//     completeOnboarding,
-//     checkAuthState,
-//   };
-// };

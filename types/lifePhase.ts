@@ -12,15 +12,15 @@
 //   pregnancyMonth: number;
 // }
 
+import { lifePhaseType } from '@/store/api/onboardingApi';
 import { ReactNode } from 'react';
 
 export interface PhaseOption {
   id: string;
   label: string;
-  value: string;
-  leftIcon: ((color: string) => ReactNode) | null;
+  value: lifePhaseType;
+  leftIcon?: ((color: string) => ReactNode) | null; // ✅ optional, allows null
 }
-
 export interface LifePhaseData {
   selectedPhase: string | null;
   customPhase: string;

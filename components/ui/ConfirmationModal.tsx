@@ -30,26 +30,31 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center bg-black/50">
-        <View className="mx-6 rounded-2xl bg-white p-6" style={{ width: '80%' }}>
+      <View className="flex-1 items-center justify-center bg-black/50 px-6">
+        <View className="w-full rounded-2xl bg-[#E8DDD0] p-6" style={{ maxWidth: 380 }}>
           {/* Icon */}
           <View className="mb-4 items-center">
             <View
-              className="h-16 w-16 items-center justify-center rounded-full"
+              className="h-[50] w-[50] items-center justify-center rounded-full"
               style={{ backgroundColor: `${iconColor}20` }}>
-              <Ionicons name={iconName as any} size={32} color={iconColor} />
+              <Ionicons
+                name={iconName as any}
+                style={{ marginLeft: 3 }}
+                size={28}
+                color={iconColor}
+              />
             </View>
           </View>
 
           {/* Title */}
           <Text
-            className="font-outfitBold mb-2 text-center text-[20px]"
+            className="mb-2 text-center font-outfitMedium text-[20px]"
             style={{ color: '#2E2117' }}>
             {title}
           </Text>
 
           {/* Message */}
-          <Text className="mb-6 text-center font-outfit text-[14px]" style={{ color: '#2E211766' }}>
+          <Text className="mb-6 text-center font-outfit text-[14px]" style={{ color: '#361A0DCC' }}>
             {message}
           </Text>
 

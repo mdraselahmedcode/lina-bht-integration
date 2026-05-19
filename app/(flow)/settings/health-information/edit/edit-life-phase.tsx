@@ -11,7 +11,6 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
@@ -33,11 +32,20 @@ import {
 import { CheckInCircleIcon } from '@/components/icons/CheckInCircleIcon';
 import VectorBg from '@/components/VectorBg';
 
+import {
+  LifePhaseRequest,
+  lifePhaseType,
+  useGetLifePhaseQuery,
+  useUpdateLifePhaseMutation,
+} from '@/store/api/onboardingApi';
+import { parseLifePhase } from '@/utils/lifePhaseUtils';
+import { extractApiError } from '@/utils/apiError';
+
 const CURRENT_PHASE = [
   {
     id: 'period',
     label: 'On my period',
-    value: 'period',
+    value: 'on my period' as lifePhaseType, // ✅ was 'period'
     leftIcon: (color: string) => (
       <PeriodIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
@@ -45,7 +53,7 @@ const CURRENT_PHASE = [
   {
     id: 'pregnant',
     label: 'Pregnant',
-    value: 'pregnant',
+    value: 'pregnant' as lifePhaseType,
     leftIcon: (color: string) => (
       <PregnantIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
@@ -53,7 +61,7 @@ const CURRENT_PHASE = [
   {
     id: 'postpartum',
     label: 'Postpartum',
-    value: 'postpartum',
+    value: 'postpartum' as lifePhaseType,
     leftIcon: (color: string) => (
       <PostpartumIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
@@ -61,7 +69,7 @@ const CURRENT_PHASE = [
   {
     id: 'menopause',
     label: 'Menopause',
-    value: 'menopause',
+    value: 'menopause' as lifePhaseType,
     leftIcon: (color: string) => (
       <MenoPauseIcon width={24} height={24} color={color} style={{ marginLeft: 6 }} />
     ),
@@ -69,13 +77,14 @@ const CURRENT_PHASE = [
   {
     id: 'none',
     label: 'None',
-    value: 'none',
+    value: 'none' as lifePhaseType,
+    leftIcon: null,
   },
   {
     id: 'other',
     label: 'Other',
-    value: 'other',
-    leftIcon: (color: string) => null,
+    value: 'other' as lifePhaseType,
+    leftIcon: (_color: string) => null,
   },
 ];
 
@@ -87,8 +96,8 @@ export default function EditLifePhaseScreen() {
   const [customPhase, setCustomPhase] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [pregnancyMonth, setPregnancyMonth] = useState(1);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isSaving, setIsSaving] = useState(false);
+  // const [isLoading, setIsLoading] = useState(true);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -128,32 +137,26 @@ export default function EditLifePhaseScreen() {
     }
   }, [showCustomInput]);
 
+  const { data: lifePhaseData, isLoading } = useGetLifePhaseQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+  const [updateLifePhase, { isLoading: isSaving }] = useUpdateLifePhaseMutation();
+
   useEffect(() => {
-    loadCurrentPhase();
-  }, []);
-
-  const loadCurrentPhase = async () => {
-    try {
-      const savedPhase = await AsyncStorage.getItem('user_current_phase');
-      const savedCustomPhase = await AsyncStorage.getItem('user_custom_phase');
-      const savedPregnancyMonth = await AsyncStorage.getItem('user_pregnancy_month');
-
-      if (savedPhase) {
-        setSelectedPhase(savedPhase);
-        if (savedPhase === 'other' && savedCustomPhase) {
-          setCustomPhase(savedCustomPhase);
-          setShowCustomInput(true);
-        }
-        if (savedPhase === 'pregnant' && savedPregnancyMonth) {
-          setPregnancyMonth(parseInt(savedPregnancyMonth));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading phase:', error);
-    } finally {
-      setIsLoading(false);
+    if (!lifePhaseData?.life_phase) return;
+    const {
+      phase,
+      customText,
+      pregnancyMonth: savedMonth,
+    } = parseLifePhase(lifePhaseData.life_phase);
+    if (!phase) return;
+    setSelectedPhase(phase);
+    if (phase === 'pregnant') setPregnancyMonth(savedMonth);
+    if (phase === 'other') {
+      setCustomPhase(customText);
+      setShowCustomInput(true);
     }
-  };
+  }, [lifePhaseData]);
 
   const handlePhaseSelect = (value: string) => {
     if (value === 'other') {
@@ -182,35 +185,28 @@ export default function EditLifePhaseScreen() {
       showError('Please select a phase');
       return;
     }
-
     if (selectedPhase === 'other' && !customPhase.trim()) {
       showError('Please enter your current phase');
       return;
     }
 
-    setIsSaving(true);
     try {
-      await AsyncStorage.setItem('user_current_phase', selectedPhase);
+      const payload: LifePhaseRequest = {
+        current_phase: selectedPhase as lifePhaseType, // ✅ cast here
+        custom_text:
+          selectedPhase === 'pregnant'
+            ? pregnancyMonth.toString()
+            : selectedPhase === 'other'
+              ? customPhase.trim()
+              : null,
+      };
 
-      if (selectedPhase === 'other' && customPhase.trim()) {
-        await AsyncStorage.setItem('user_custom_phase', customPhase.trim());
-      } else {
-        await AsyncStorage.removeItem('user_custom_phase');
-      }
-
-      if (selectedPhase === 'pregnant') {
-        await AsyncStorage.setItem('user_pregnancy_month', pregnancyMonth.toString());
-      } else {
-        await AsyncStorage.removeItem('user_pregnancy_month');
-      }
+      await updateLifePhase(payload).unwrap();
 
       showSuccess('Life phase updated successfully');
       router.back();
-    } catch (error) {
-      console.error('Error saving phase:', error);
-      showError('Failed to update');
-    } finally {
-      setIsSaving(false);
+    } catch (error: any) {
+      showError(extractApiError(error, 'Failed to update. Please try again.'));
     }
   };
 
@@ -268,7 +264,10 @@ export default function EditLifePhaseScreen() {
 
             <View className="gap-3">
               {CURRENT_PHASE.map((option) => {
-                const isSelected = selectedPhase === option.value && !showCustomInput;
+                const isSelected =
+                  option.value === 'other'
+                    ? selectedPhase === 'other' // ✅ "other" is selected when phase is 'other'
+                    : selectedPhase === option.value && !showCustomInput;
                 const activeColor = '#759A52';
                 const inactiveColor = '#361A0D';
                 const iconColor = isSelected ? activeColor : inactiveColor;

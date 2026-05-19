@@ -1,7 +1,6 @@
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
-
 import FormLayout from '@/components/layouts/FormLayout';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
 import InputField from '@/components/inputs/Input';
@@ -11,13 +10,16 @@ import ForgotPasswordFields from '@/components/formFields/ForgotPasswordFields';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import ErrorScreen from '@/components/errors/ErrorScreen';
 import LoadingScreen from '@/components/loading/LoadingScreen';
+import { useForgotPasswordMutation } from '@/store/api/authApi';
+import { extractApiError } from '@/utils/apiError';
 
 export default function EmailScreen() {
   const router = useRouter();
-  const [isSending, setIsSending] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-
   const { fields, setFields } = ForgotPasswordFields();
+  const { showError, showSuccess } = useToast();
+
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
@@ -29,53 +31,46 @@ export default function EmailScreen() {
   const updateField = (name: string, value: string) =>
     setFields((prev) => prev.map((f) => (f.name === name ? { ...f, value, error: false } : f)));
 
-  const { showError, showSuccess } = useToast();
-
   const handleSendCode = async () => {
-    const email = (getField('email')?.value as string) || '';
-    if (!email.trim()) {
-      showError('Please enter your email');
+    const email = (getField('email')?.value as string)?.trim() || '';
+
+    if (!email) {
+      showError('Please enter your email address');
       return;
     }
 
-    setIsSending(true);
-    try {
-      // Simulate API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showError('Please enter a valid email address');
+      return;
+    }
 
-      showSuccess('Verification code sent to your email');
+    try {
+      await forgotPassword({ email }).unwrap();
+      showSuccess('If this email is registered, a reset code has been sent.');
       router.push({
         pathname: '/(auth)/(forgot-password)/verify-code',
         params: { email },
       });
-    } catch (error) {
-      showError('Failed to send verification code. Please try again.');
-    } finally {
-      setIsSending(false);
+    } catch (error: any) {
+      showError(extractApiError(error, 'Failed to send verification code. Please try again.'));
     }
   };
 
-  const handleRetry = () => {
-    router.replace('/(auth)/(forgot-password)/email');
-  };
+  const handleRetry = () => router.replace('/(auth)/(forgot-password)/email');
 
-  // Mark initial load as complete after first render
   useEffect(() => {
-    if (isContentReady && isInitialLoad) {
-      setIsInitialLoad(false);
-    }
+    if (isContentReady && isInitialLoad) setIsInitialLoad(false);
   }, [isContentReady]);
 
-  // Show initial render loading (useScreenReady) - ONLY on first load
   if (isRendering && isInitialLoad) {
     return (
       <FormLayout>
-        <LoadingScreen loadingText="Preparing give a sec..." backgroundColor="transparent" />
+        <LoadingScreen loadingText="Just a sec..." backgroundColor="transparent" />
       </FormLayout>
     );
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
@@ -93,13 +88,12 @@ export default function EmailScreen() {
           transform: [{ translateY: isContentReady ? 0 : 10 }],
         }}>
         <View className="mb-10">
-          <AuthFormTitle text="Let’s Get You Back In" style={{ fontSize: 26 }} />
-          <Text className=" mt-2 text-center font-outfit text-[14px] text-titleTextColor/60">
+          <AuthFormTitle text="Let's Get You Back In" style={{ fontSize: 26 }} />
+          <Text className="mt-2 text-center font-outfit text-[14px] text-titleTextColor/60">
             Enter your email to receive a verification code
           </Text>
         </View>
 
-        {/* Email Input Field */}
         <InputField
           placeHolder="Email Address"
           keyboard="email-address"
@@ -110,12 +104,11 @@ export default function EmailScreen() {
           style={{ marginBottom: 24 }}
         />
 
-        {/* Send Code Button */}
         <PrimaryButton
-          title={isSending ? 'Sending...' : 'Send Code'}
+          title={isLoading ? 'Sending...' : 'Send Code'}
           onPress={handleSendCode}
-          disabled={isSending}
-          isLoading={isSending}
+          disabled={isLoading}
+          isLoading={isLoading}
         />
       </View>
     </FormLayout>

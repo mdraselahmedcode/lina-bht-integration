@@ -33,8 +33,15 @@ export const useFormValidation = () => {
       return false;
     }
 
-    if (password.length < 6) {
-      showError('Password must be at least 6 characters long');
+    if (password.length < 8) {
+      showError('Password must be at least 8 characters long');
+      return false;
+    }
+
+    // must contain at least one letter
+    const letterRegex = /[a-zA-Z]/;
+    if (!letterRegex.test(password)) {
+      showError('Password must contain at least one letter');
       return false;
     }
 

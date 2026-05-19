@@ -1,6 +1,6 @@
 /* eslint-disable import/no-unresolved */
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react'; // ✅ Add useState
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
@@ -10,81 +10,97 @@ import PillowBadge from '@/components/buttons/PillowBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import {
   ArrowRightHalfIcon,
-  DesignInFlameIcon,
   GearIcon,
   LogOutIcon,
   SupportIcon,
   WaveInHeartIcon,
 } from '@/components/icons';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useRouter } from 'expo-router';
 import { CircularIconButton } from '@/components/buttons/CircularIconButton';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/hooks/useAuth';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useGetProfileQuery, useGetProfileTabQuery } from '@/store/api/profileApi';
+
+// Inside profile.tsx, above the Profile component:
+// const AvatarFromApi = () => {
+//   const { data } = useGetProfileQuery(); // already cached, no extra network call
+//   return (
+//     <Avatar
+//       source={data?.avatar_url ?? undefined}
+//       size={50}
+//       fallbackIcon="person-circle"
+//       iconColor="#361A0D"
+//       backgroundColor="#E5E0D8"
+//     />
+//   );
+// };
 
 const Profile = () => {
   const router = useRouter();
   const { logout } = useAuth();
   const { showSuccess, showError } = useToast();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // State for user data
-  const [userName, setUserName] = useState('Elena Rossi');
-  const [userEmail, setUserEmail] = useState('testuser@skinsense.com');
-  const [userAvatar, setUserAvatar] = useState('https://randomuser.me/api/portraits/women/64.jpg');
+  // ✅ Single source of truth for this screen
+  // const { data: profile, isLoading: profileLoading } = useGetProfileTabQuery();
+  const { data: profile, isLoading: profileLoading } = useGetProfileTabQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
 
-  // Screen ready state
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
     delay: 100,
     initialReady: false,
   });
 
-  // Load user data from AsyncStorage
-  // useEffect(() => {
-  //   const loadUserData = async () => {
-  //     try {
-  //       // You can load user data from AsyncStorage or your auth context
-  //       const name = await AsyncStorage.getItem('user_name');
-  //       const email = await AsyncStorage.getItem('user_email');
-  //       const avatar = await AsyncStorage.getItem('user_avatar');
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  //       if (name) setUserName(name);
-  //       if (email) setUserEmail(email);
-  //       if (avatar) setUserAvatar(avatar);
-  //     } catch (error) {
-  //       console.error('Error loading user data:', error);
-  //     }
-  //   };
-
-  //   loadUserData();
-  // }, []);
-
-  // 1. MOCK DATA OBJECT (Simulates a Backend API Response)
   const USER_PROFILE_DATA = [
-    { id: '1', label: 'Skin Type', value: 'Combination' },
-    { id: '2', label: 'Skin Concerns', value: 'Redness, Occasional Breakouts, Uneven Texture' },
-    { id: '3', label: 'Hair Type', value: 'Fine' },
-    { id: '4', label: 'Allergies', value: 'Fragrance, Sulfates' },
+    {
+      id: '1',
+      label: 'Skin Type',
+      value: profile?.onboarding.skin_type ? capitalize(profile.onboarding.skin_type) : 'Not set',
+    },
+    {
+      id: '2',
+      label: 'Skin Concerns',
+      value: profile?.onboarding.skin_concerns?.length
+        ? profile.onboarding.skin_concerns.map(capitalize).join(', ')
+        : 'None',
+    },
+    {
+      id: '3',
+      label: 'Hair Type',
+      value: profile?.onboarding.hair_type ? capitalize(profile.onboarding.hair_type) : 'Not set',
+    },
+    {
+      id: '4',
+      label: 'Allergies',
+      value: profile?.onboarding.allergies?.length
+        ? profile.onboarding.allergies.join(', ')
+        : 'None',
+    },
   ];
 
-  const handleLogout = async () => {
+  const handleLogoutPress = () => setShowLogoutModal(true);
+
+  const handleConfirmLogout = async () => {
+    setShowLogoutModal(false);
     try {
       await logout();
       showSuccess('You have been logged out successfully');
-    } catch (error) {
+    } catch {
       showError('Failed to log out. Please try again.');
     }
   };
 
-  const handleRetry = () => {
-    router.replace('/(main)/profile');
-  };
+  const handleRetry = () => router.replace('/(main)/profile');
 
-  // Show loading while screen is rendering
-  if (isRendering) {
+  if (isRendering || profileLoading) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
         <LoadingScreen loadingText="Loading your profile..." />
@@ -92,7 +108,6 @@ const Profile = () => {
     );
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
@@ -112,9 +127,7 @@ const Profile = () => {
           <CircularIconButton
             size={40}
             icon={<GearIcon size={20} color="#361A0D" />}
-            onPress={() => {
-              router.push('/(flow)/settings');
-            }}
+            onPress={() => router.push('/(flow)/settings')}
           />
         }
       />
@@ -133,42 +146,41 @@ const Profile = () => {
             opacity: isContentReady ? 1 : 0,
             transform: [{ translateY: isContentReady ? 0 : 10 }],
           }}>
-          {/* Personal status Card */}
+          {/* Profile Header Card */}
           <BorderlessShadowCard
-            style={{
-              paddingVertical: 24,
-              paddingHorizontal: 24,
-              alignItems: 'center',
-            }}>
-            <View className="flex-1 flex-row items-center gap-3">
-              {/* Avatar Component */}
+            style={{ paddingVertical: 24, paddingHorizontal: 24, alignItems: 'center' }}>
+            <PillowBadge
+              title={profile?.plan ? capitalize(profile.plan) + ' Plan' : 'Free Plan'}
+              style={{ maxWidth: 120, flex: 1, alignSelf: 'flex-end', marginBottom: 5 }}
+            />
+            <View className="w-full flex-row items-center gap-3">
+              {/* ✅ avatar comes from /profile/profile_edit via useGetProfileQuery, */}
+
+              {/* <AvatarFromApi /> */}
               <Avatar
-                source={userAvatar}
-                size={51}
+                source={profile?.avatar_url ?? undefined}
+                size={50}
                 fallbackIcon="person-circle"
                 iconColor="#361A0D"
                 backgroundColor="#E5E0D8"
               />
-
-              <View className="flex-1">
-                <View className="w-full flex-row items-center justify-between">
-                  <Text
-                    className="flex-1 font-outfitMedium text-[24px]"
-                    style={{ color: '#2A2118' }}>
-                    {userName}
-                  </Text>
-                  <PillowBadge title="Free Plan" />
-                </View>
+              <View className="flex-1 justify-center">
+                <Text className="flex-1 font-outfitMedium text-[24px]" style={{ color: '#2A2118' }}>
+                  {profile?.name || 'User'}
+                </Text>
                 <Text
                   numberOfLines={1}
                   className="font-primous text-[16px]"
                   style={{ color: '#2A2118CC' }}>
-                  {userEmail}
+                  {profile?.gmail || ''}
                 </Text>
               </View>
             </View>
           </BorderlessShadowCard>
 
+          {/* ... rest of your JSX unchanged, just replace user?.X with profile?.onboarding.X ... */}
+
+          {/* Skin & Hair Profile Card */}
           <BorderlessShadowCard
             b_tl={0}
             b_tr={0}
@@ -178,8 +190,6 @@ const Profile = () => {
             <Text className="mb-5 font-outfitMedium text-[16px]" style={{ color: '#361A0D' }}>
               Skin & Hair Profile
             </Text>
-
-            {/* 2. DYNAMIC LOOP */}
             {USER_PROFILE_DATA.map((item, index) => (
               <View key={item.id}>
                 <View className="flex-row items-start justify-between">
@@ -192,8 +202,6 @@ const Profile = () => {
                     {item.value}
                   </Text>
                 </View>
-
-                {/* Render divider only if it's NOT the last item */}
                 {index < USER_PROFILE_DATA.length - 1 && (
                   <View className="my-2 h-[1px] w-full bg-[#dec8b3]" />
                 )}
@@ -202,96 +210,73 @@ const Profile = () => {
           </BorderlessShadowCard>
 
           {/* Premium Upgrade Card */}
-          <BorderlessShadowCard
-            b_tl={0}
-            b_tr={0}
-            b_bl={24}
-            b_br={24}
-            style={{
-              paddingVertical: 24,
-              paddingHorizontal: 24,
-              marginTop: 12,
-            }}>
-            <Text className="font-outfitMedium text-[16px]" style={{ color: '#361A0D' }}>
-              Unlock Premium
-            </Text>
-            <Text className="mt-[6px] font-outfit text-[12px]" style={{ color: '#2A2118B2' }}>
-              Get advanced AI analysis, unlimited product scans, and priority support.
-            </Text>
-            <PrimaryButton
-              title="Upgrade"
-              height={48}
-              style={{ marginTop: 10 }}
-              textStyle={{ fontSize: 16 }}
-              onPress={() => {
-                router.push('/(flow)/profile/asking-upgrage-to-premium-screen');
-              }}
-            />
-          </BorderlessShadowCard>
+          {profile?.plan === 'free' && (
+            <BorderlessShadowCard
+              b_tl={0}
+              b_tr={0}
+              b_bl={24}
+              b_br={24}
+              style={{ paddingVertical: 24, paddingHorizontal: 24, marginTop: 12 }}>
+              <Text className="font-outfitMedium text-[16px]" style={{ color: '#361A0D' }}>
+                Unlock Premium
+              </Text>
+              <Text className="mt-[6px] font-outfit text-[12px]" style={{ color: '#2A2118B2' }}>
+                Get advanced AI analysis, unlimited product scans, and priority support.
+              </Text>
+              <PrimaryButton
+                title="Upgrade"
+                height={48}
+                style={{ marginTop: 10 }}
+                textStyle={{ fontSize: 16 }}
+                onPress={() => router.push('/(flow)/profile/asking-upgrage-to-premium-screen')}
+              />
+            </BorderlessShadowCard>
+          )}
 
           {/* Features Section */}
           <View className="mt-3">
-            <View>
-              <Text className="font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
-                Feature
-              </Text>
-
-              {/* AI Assistant */}
-              <BorderlessShadowCard
-                onPress={() => {
-                  router.push('/(flow)/ai-assistant');
-                }}
-                b_tl={24}
-                b_tr={24}
-                b_bl={0}
-                b_br={0}
-                style={{
-                  paddingVertical: 16,
-                  paddingHorizontal: 24,
-                  marginTop: 8,
-                }}>
-                <View className="flex-row items-center">
-                  <View className="flex-1 flex-row items-center gap-3">
-                    <Image
-                      source={require('@/assets/images/ai_floating_logo.png')}
-                      style={{ width: 16, height: 19 }}
-                      resizeMode="contain"
-                    />
-
-                    <Text className="font-outfit text-[14px]" style={{ color: '#361A0D' }}>
-                      AI Assistant
-                    </Text>
-                  </View>
-
-                  <ArrowRightHalfIcon size={16} color="#361A0D" />
+            <Text className="font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
+              Feature
+            </Text>
+            <BorderlessShadowCard
+              onPress={() => router.push('/(flow)/ai-assistant')}
+              b_tl={24}
+              b_tr={24}
+              b_bl={0}
+              b_br={0}
+              style={{ paddingVertical: 16, paddingHorizontal: 24, marginTop: 8 }}>
+              <View className="flex-row items-center">
+                <View className="flex-1 flex-row items-center gap-3">
+                  <Image
+                    source={require('@/assets/images/ai_floating_logo.png')}
+                    style={{ width: 16, height: 19 }}
+                    resizeMode="contain"
+                  />
+                  <Text className="font-outfit text-[14px]" style={{ color: '#361A0D' }}>
+                    AI Assistant
+                  </Text>
                 </View>
-              </BorderlessShadowCard>
+                <ArrowRightHalfIcon size={16} color="#361A0D" />
+              </View>
+            </BorderlessShadowCard>
 
-              {/* Wellness & Cycle */}
-              <BorderlessShadowCard
-                onPress={() => {
-                  router.push('/(flow)/wellness');
-                }}
-                b_tl={0}
-                b_tr={0}
-                b_bl={24}
-                b_br={24}
-                style={{
-                  paddingVertical: 16,
-                  paddingHorizontal: 24,
-                  marginTop: 8,
-                }}>
-                <View className="flex-row items-center">
-                  <View className="flex-1 flex-row items-center gap-3">
-                    <WaveInHeartIcon size={20} color="#361A0D" />
-                    <Text className="font-outfit text-[14px]" style={{ color: '#361A0D' }}>
-                      Wellness & Cycle
-                    </Text>
-                  </View>
-                  <ArrowRightHalfIcon size={16} color="#361A0D" />
+            <BorderlessShadowCard
+              onPress={() => router.push('/(flow)/wellness')}
+              b_tl={0}
+              b_tr={0}
+              b_bl={24}
+              b_br={24}
+              style={{ paddingVertical: 16, paddingHorizontal: 24, marginTop: 8 }}>
+              <View className="flex-row items-center">
+                <View className="flex-1 flex-row items-center gap-3">
+                  <WaveInHeartIcon size={20} color="#361A0D" />
+                  <Text className="font-outfit text-[14px]" style={{ color: '#361A0D' }}>
+                    Wellness & Cycle
+                  </Text>
                 </View>
-              </BorderlessShadowCard>
-            </View>
+                <ArrowRightHalfIcon size={16} color="#361A0D" />
+              </View>
+            </BorderlessShadowCard>
           </View>
 
           {/* Account Section */}
@@ -299,20 +284,13 @@ const Profile = () => {
             <Text className="mt-3 font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
               Account
             </Text>
-
             <BorderlessShadowCard
-              onPress={() => {
-                router.push('/(flow)/profile/premium-plan-screen');
-              }}
+              onPress={() => router.push('/(flow)/profile/premium-plan-screen')}
               b_tl={24}
               b_tr={24}
               b_bl={24}
               b_br={24}
-              style={{
-                paddingVertical: 16,
-                paddingHorizontal: 24,
-                marginTop: 8,
-              }}>
+              style={{ paddingVertical: 16, paddingHorizontal: 24, marginTop: 8 }}>
               <View className="flex-row items-center">
                 <View className="flex-1 flex-row items-center gap-3">
                   <WaveInHeartIcon size={20} color="#361A0D" />
@@ -330,20 +308,13 @@ const Profile = () => {
             <Text className="mt-3 font-outfitMedium text-[16px]" style={{ color: '#2E2117' }}>
               Legal & Support
             </Text>
-            {/* support */}
             <BorderlessShadowCard
-              onPress={() => {
-                router.push('/(flow)/support');
-              }}
+              onPress={() => router.push('/(flow)/support')}
               b_tl={24}
               b_tr={24}
               b_bl={0}
               b_br={0}
-              style={{
-                paddingVertical: 16,
-                paddingHorizontal: 24,
-                marginTop: 8,
-              }}>
+              style={{ paddingVertical: 16, paddingHorizontal: 24, marginTop: 8 }}>
               <View className="flex-row items-center">
                 <View className="flex-1 flex-row items-center gap-3">
                   <SupportIcon size={20} color="#361A0D" />
@@ -355,20 +326,13 @@ const Profile = () => {
               </View>
             </BorderlessShadowCard>
 
-            {/* privacy and terms */}
             <BorderlessShadowCard
-              onPress={() => {
-                router.push('/(flow)/privacy-and-terms');
-              }}
+              onPress={() => router.push('/(flow)/privacy-and-terms')}
               b_tl={0}
               b_tr={0}
               b_bl={24}
               b_br={24}
-              style={{
-                paddingVertical: 16,
-                paddingHorizontal: 24,
-                marginTop: 8,
-              }}>
+              style={{ paddingVertical: 16, paddingHorizontal: 24, marginTop: 8 }}>
               <View className="flex-row items-center">
                 <View className="flex-1 flex-row items-center gap-3">
                   <WaveInHeartIcon size={20} color="#361A0D" />
@@ -381,9 +345,9 @@ const Profile = () => {
             </BorderlessShadowCard>
           </View>
 
-          {/* Log Out Button */}
+          {/* Log Out Button - Updated with modal trigger */}
           <TouchableOpacity
-            onPress={handleLogout}
+            onPress={handleLogoutPress}
             activeOpacity={0.6}
             className="mt-8 w-full flex-row justify-center gap-3">
             <LogOutIcon size={18} color="#2E2117" />
@@ -395,6 +359,20 @@ const Profile = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* ✅ Logout Confirmation Modal */}
+      <ConfirmationModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+        title="Log Out"
+        message="Are you sure you want to log out? You'll need to sign in again to access your account."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        iconName="log-out-outline"
+        iconColor="#977857"
+        confirmButtonColor="#EF4444"
+      />
     </SafeAreaView>
   );
 };

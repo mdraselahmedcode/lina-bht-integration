@@ -1,5 +1,5 @@
 // app/(questionnaire)/skin-hair-condition.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, useWindowDimensions, Animated, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,8 +24,8 @@ import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
 import { CheckIconButton } from '@/components/CheckIconButton';
 import InputField from '@/components/inputs/Input';
+import { useGetSkinHairQuery, useSaveSkinHairMutation } from '@/store/api/onboardingApi';
 
-// ==================== SKIN TYPE (with icons) ====================
 const SKIN_TYPE = [
   {
     id: 'dry',
@@ -69,17 +69,25 @@ const SKIN_TYPE = [
   },
 ];
 
-// ==================== SKIN CONCERNS (with Other option) ====================
 const SKIN_CONCERNS_OPTIONS = [
-  { id: 'acne', label: 'Acne, Pimple', value: 'acne_pimple' },
-  { id: 'irritation', label: 'Irritation, redness', value: 'irritation_redness' },
+  { id: 'acne', label: 'Acne, Pimple', value: 'acne' },
+  { id: 'irritation', label: 'Irritation, redness', value: 'irritation' },
   { id: 'pigmentation', label: 'Pigmentation', value: 'pigmentation' },
   { id: 'dullness', label: 'Dullness', value: 'dullness' },
   { id: 'none', label: 'No concerns', value: 'none' },
-  { id: 'skin_other', label: 'Other', value: 'skin_other' },
 ];
 
-// ==================== HAIR TYPE (with icons) ====================
+const HAIR_CONCERNS_OPTIONS = [
+  { id: 'hair_fall', label: 'Hair fall', value: 'hair fall' },
+  { id: 'dandruff', label: 'Dandruff', value: 'dandruff' },
+  { id: 'oily_scalp', label: 'Oily Scalp', value: 'oily scalp' },
+  { id: 'dry_scalp', label: 'Dry Scalp', value: 'dry scalp' },
+  { id: 'none', label: 'No concerns', value: 'none' },
+];
+
+const PREDEFINED_SKIN_CONCERNS = SKIN_CONCERNS_OPTIONS.map((o) => o.value);
+const PREDEFINED_HAIR_CONCERNS = HAIR_CONCERNS_OPTIONS.map((o) => o.value);
+
 const HAIR_TYPE = [
   {
     id: 'wavy',
@@ -115,26 +123,16 @@ const HAIR_TYPE = [
   },
 ];
 
-// ==================== HAIR CONCERNS (with Other option) ====================
-const HAIR_CONCERNS_OPTIONS = [
-  { id: 'hair_fall', label: 'Hair fall', value: 'hair_fall' },
-  { id: 'dandruff', label: 'Dandruff', value: 'dandruff' },
-  { id: 'oily_scalp', label: 'Oily Scalp', value: 'oily_scalp' },
-  { id: 'dry_scalp', label: 'Dry Scalp', value: 'dry_scalp' },
-  { id: 'none', label: 'No concerns', value: 'none' },
-  { id: 'hair_other', label: 'Other', value: 'hair_other' },
-];
-
 export default function SkinHairConditionScreen() {
   const router = useRouter();
   const { showError } = useToast();
   const { width: screenWidth } = useWindowDimensions();
+
   const [selectedSkinType, setSelectedSkinType] = useState<string | null>(null);
   const [selectedSkinConcerns, setSelectedSkinConcerns] = useState<string[]>([]);
   const [selectedHairType, setSelectedHairType] = useState<string | null>(null);
   const [selectedHairConcerns, setSelectedHairConcerns] = useState<string[]>([]);
 
-  // Custom concerns states
   const [showSkinCustomInput, setShowSkinCustomInput] = useState(false);
   const [skinCustomConcern, setSkinCustomConcern] = useState('');
   const [skinCustomConcernsList, setSkinCustomConcernsList] = useState<string[]>([]);
@@ -143,17 +141,64 @@ export default function SkinHairConditionScreen() {
   const [hairCustomConcern, setHairCustomConcern] = useState('');
   const [hairCustomConcernsList, setHairCustomConcernsList] = useState<string[]>([]);
 
-  // Animation values
   const skinFadeAnim = React.useRef(new Animated.Value(0)).current;
   const skinSlideAnim = React.useRef(new Animated.Value(20)).current;
   const hairFadeAnim = React.useRef(new Animated.Value(0)).current;
   const hairSlideAnim = React.useRef(new Animated.Value(20)).current;
+
+  // ✅ Fetch previously saved data
+  const { data: savedSkinHair, isLoading: isLoadingSaved } = useGetSkinHairQuery();
+
+  // ✅ Save mutation
+  const [saveSkinHair, { isLoading: isSaving }] = useSaveSkinHairMutation();
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
     delay: 100,
     initialReady: false,
   });
+
+  // ✅ Pre-fill from saved data
+  useEffect(() => {
+    if (!savedSkinHair) return;
+
+    if (savedSkinHair.skin_type) {
+      setSelectedSkinType(savedSkinHair.skin_type);
+    }
+
+    if (savedSkinHair.hair_type) {
+      setSelectedHairType(savedSkinHair.hair_type);
+    }
+
+    if (savedSkinHair.skin_concerns?.length) {
+      // ✅ Only accept values that match our current predefined list
+      const predefined = savedSkinHair.skin_concerns.filter((c) =>
+        PREDEFINED_SKIN_CONCERNS.includes(c)
+      );
+      const custom = savedSkinHair.skin_concerns.filter(
+        (c) => !PREDEFINED_SKIN_CONCERNS.includes(c)
+      );
+      setSelectedSkinConcerns(predefined);
+      if (custom.length > 0) {
+        setSkinCustomConcernsList(custom);
+        setShowSkinCustomInput(true);
+      }
+    }
+
+    if (savedSkinHair.hair_concerns?.length) {
+      const predefined = savedSkinHair.hair_concerns.filter((c) =>
+        PREDEFINED_HAIR_CONCERNS.includes(c)
+      );
+      const custom = savedSkinHair.hair_concerns.filter(
+        (c) => !PREDEFINED_HAIR_CONCERNS.includes(c)
+      );
+      setSelectedHairConcerns(predefined);
+      if (custom.length > 0) {
+        setHairCustomConcernsList(custom);
+        setShowHairCustomInput(true);
+      }
+    }
+  }, [savedSkinHair]);
 
   React.useEffect(() => {
     if (showSkinCustomInput) {
@@ -202,30 +247,50 @@ export default function SkinHairConditionScreen() {
   const toggleSkinConcern = (concernValue: string) => {
     if (concernValue === 'skin_other') {
       setShowSkinCustomInput(!showSkinCustomInput);
-      if (!showSkinCustomInput) {
+      if (!showSkinCustomInput) setSkinCustomConcern('');
+    } else if (concernValue === 'none') {
+      // ✅ Selecting "No concerns" clears everything else
+      if (selectedSkinConcerns.includes('none')) {
+        setSelectedSkinConcerns([]);
+      } else {
+        setSelectedSkinConcerns(['none']);
+        setSkinCustomConcernsList([]);
         setSkinCustomConcern('');
+        setShowSkinCustomInput(false);
       }
     } else {
-      if (selectedSkinConcerns.includes(concernValue)) {
-        setSelectedSkinConcerns(selectedSkinConcerns.filter((item) => item !== concernValue));
-      } else {
-        setSelectedSkinConcerns([...selectedSkinConcerns, concernValue]);
-      }
+      // ✅ Selecting any real concern removes "none"
+      setSelectedSkinConcerns((prev) => {
+        const withoutNone = prev.filter((item) => item !== 'none');
+        return withoutNone.includes(concernValue)
+          ? withoutNone.filter((item) => item !== concernValue)
+          : [...withoutNone, concernValue];
+      });
     }
   };
 
   const toggleHairConcern = (concernValue: string) => {
     if (concernValue === 'hair_other') {
       setShowHairCustomInput(!showHairCustomInput);
-      if (!showHairCustomInput) {
+      if (!showHairCustomInput) setHairCustomConcern('');
+    } else if (concernValue === 'none') {
+      // ✅ Selecting "No concerns" clears everything else
+      if (selectedHairConcerns.includes('none')) {
+        setSelectedHairConcerns([]);
+      } else {
+        setSelectedHairConcerns(['none']);
+        setHairCustomConcernsList([]);
         setHairCustomConcern('');
+        setShowHairCustomInput(false);
       }
     } else {
-      if (selectedHairConcerns.includes(concernValue)) {
-        setSelectedHairConcerns(selectedHairConcerns.filter((item) => item !== concernValue));
-      } else {
-        setSelectedHairConcerns([...selectedHairConcerns, concernValue]);
-      }
+      // ✅ Selecting any real concern removes "none"
+      setSelectedHairConcerns((prev) => {
+        const withoutNone = prev.filter((item) => item !== 'none');
+        return withoutNone.includes(concernValue)
+          ? withoutNone.filter((item) => item !== concernValue)
+          : [...withoutNone, concernValue];
+      });
     }
   };
 
@@ -234,47 +299,65 @@ export default function SkinHairConditionScreen() {
       showError('Please select your skin type');
       return;
     }
-
     if (!selectedHairType) {
       showError('Please select your hair type');
       return;
     }
 
-    // Process skin concerns
-    let finalSkinConcerns = [...selectedSkinConcerns];
+    // ✅ Only send predefined values in the concerns arrays
+    let finalSkinConcerns = selectedSkinConcerns.filter(
+      (c) => PREDEFINED_SKIN_CONCERNS.includes(c) && c !== 'none'
+    );
+    let finalHairConcerns = selectedHairConcerns.filter(
+      (c) => PREDEFINED_HAIR_CONCERNS.includes(c) && c !== 'none'
+    );
+
+    // ✅ Custom concerns go ONLY to skin_other / hair_other
     let finalSkinCustomList = [...skinCustomConcernsList];
+    let finalHairCustomList = [...hairCustomConcernsList];
 
     if (showSkinCustomInput && skinCustomConcern.trim()) {
       const newConcern = skinCustomConcern.trim();
-      if (!finalSkinConcerns.includes(newConcern)) {
-        finalSkinConcerns.push(newConcern);
+      if (!finalSkinCustomList.includes(newConcern)) {
         finalSkinCustomList.push(newConcern);
       }
     }
 
-    // Process hair concerns
-    let finalHairConcerns = [...selectedHairConcerns];
-    let finalHairCustomList = [...hairCustomConcernsList];
-
     if (showHairCustomInput && hairCustomConcern.trim()) {
       const newConcern = hairCustomConcern.trim();
-      if (!finalHairConcerns.includes(newConcern)) {
-        finalHairConcerns.push(newConcern);
+      if (!finalHairCustomList.includes(newConcern)) {
         finalHairCustomList.push(newConcern);
       }
     }
 
+    console.log('🔍 Sending skin_concerns:', finalSkinConcerns);
+    console.log('🔍 Sending hair_concerns:', finalHairConcerns);
+    console.log('🔍 Sending skin_other:', finalSkinCustomList);
+    console.log('🔍 Sending hair_other:', finalHairCustomList);
+
     try {
-      await AsyncStorage.setItem('user_skin_type', selectedSkinType);
-      await AsyncStorage.setItem('user_skin_concerns', JSON.stringify(finalSkinConcerns));
-      await AsyncStorage.setItem('user_skin_custom_concerns', JSON.stringify(finalSkinCustomList));
-      await AsyncStorage.setItem('user_hair_type', selectedHairType);
-      await AsyncStorage.setItem('user_hair_concerns', JSON.stringify(finalHairConcerns));
-      await AsyncStorage.setItem('user_hair_custom_concerns', JSON.stringify(finalHairCustomList));
+      await saveSkinHair({
+        skin_type: selectedSkinType,
+        skin_concerns: finalSkinConcerns,
+        hair_type: selectedHairType,
+        hair_concerns: finalHairConcerns,
+        skin_other: finalSkinCustomList.length > 0 ? finalSkinCustomList.join(', ') : null,
+        hair_other: finalHairCustomList.length > 0 ? finalHairCustomList.join(', ') : null,
+      }).unwrap();
+
+      await AsyncStorage.multiSet([
+        ['user_skin_type', selectedSkinType],
+        ['user_skin_concerns', JSON.stringify(finalSkinConcerns)],
+        ['user_skin_custom_concerns', JSON.stringify(finalSkinCustomList)],
+        ['user_hair_type', selectedHairType],
+        ['user_hair_concerns', JSON.stringify(finalHairConcerns)],
+        ['user_hair_custom_concerns', JSON.stringify(finalHairCustomList)],
+      ]);
+
       router.push('/(questionnaire)/budget');
-    } catch (error) {
-      console.error('Error saving data:', error);
-      showError('Failed to save. Please try again.');
+    } catch (error: any) {
+      console.error('Error saving skin/hair data:', error);
+      showError(error?.data?.message || error?.data?.detail || 'Failed to save. Please try again.');
     }
   };
 
@@ -282,7 +365,6 @@ export default function SkinHairConditionScreen() {
     router.replace('/(questionnaire)/skin-hair-condition');
   };
 
-  // Determine number of columns based on screen width
   const getColumnsCount = () => {
     if (screenWidth < 380) return 1;
     if (screenWidth < 600) return 2;
@@ -291,9 +373,8 @@ export default function SkinHairConditionScreen() {
 
   const columns = getColumnsCount();
 
-  // Combine predefined options with custom concerns
   const allSkinConcerns = [
-    ...SKIN_CONCERNS_OPTIONS.filter((opt) => opt.value !== 'skin_other'),
+    ...SKIN_CONCERNS_OPTIONS,
     ...skinCustomConcernsList.map((concern, index) => ({
       id: `skin_custom_${index}`,
       label: concern,
@@ -303,7 +384,7 @@ export default function SkinHairConditionScreen() {
   ];
 
   const allHairConcerns = [
-    ...HAIR_CONCERNS_OPTIONS.filter((opt) => opt.value !== 'hair_other'),
+    ...HAIR_CONCERNS_OPTIONS,
     ...hairCustomConcernsList.map((concern, index) => ({
       id: `hair_custom_${index}`,
       label: concern,
@@ -312,7 +393,7 @@ export default function SkinHairConditionScreen() {
     { id: 'hair_other', label: 'Other', value: 'hair_other' },
   ];
 
-  if (isRendering) {
+  if (isRendering || isLoadingSaved) {
     return <LoadingScreen loadingText="Loading your preferences..." transparent={true} />;
   }
 
@@ -342,8 +423,7 @@ export default function SkinHairConditionScreen() {
             </Text>
           </View>
 
-          {/* ==================== SKIN SECTION ==================== */}
-          {/* Skin Type Section */}
+          {/* ── SKIN TYPE ── */}
           <View className="mb-6">
             <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
               Skin Type
@@ -354,10 +434,7 @@ export default function SkinHairConditionScreen() {
             <View className="gap-3">
               {SKIN_TYPE.map((option) => {
                 const isSelected = selectedSkinType === option.value;
-                const activeColor = '#759A52';
-                const inactiveColor = '#361A0D';
-                const iconColor = isSelected ? activeColor : inactiveColor;
-
+                const iconColor = isSelected ? '#759A52' : '#361A0D';
                 return (
                   <PrimaryButton
                     key={option.id}
@@ -390,7 +467,7 @@ export default function SkinHairConditionScreen() {
             </View>
           </View>
 
-          {/* Skin Concerns Section */}
+          {/* ── SKIN CONCERNS ── */}
           <View className="mb-6">
             <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
               Skin Concerns
@@ -398,56 +475,13 @@ export default function SkinHairConditionScreen() {
             <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
               What skin concerns do you have? (Select all that apply)
             </Text>
-
-            {/* Skin Concerns Grid */}
             <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-              }}>
+              style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
               {allSkinConcerns.map((option) => {
-                const isSelected = selectedSkinConcerns.includes(option.value);
                 const isOther = option.value === 'skin_other';
-
-                if (isOther) {
-                  return (
-                    <View
-                      key={option.id}
-                      style={{
-                        width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
-                        marginBottom: 12,
-                      }}>
-                      <PrimaryButton
-                        title={option.label}
-                        onPress={() => toggleSkinConcern(option.value)}
-                        leftIcon={
-                          <CheckIconButton
-                            value={showSkinCustomInput}
-                            onValueChange={() => toggleSkinConcern(option.value)}
-                            activeColor="#759A52"
-                            inactiveColor="#361A0D"
-                            size={24}
-                            marginLeft={10}
-                          />
-                        }
-                        height={56}
-                        withShadow={true}
-                        gradientColors={['#E8DDD0', '#E8DDD0']}
-                        textClassName={showSkinCustomInput ? 'text-[#759A52]' : 'text-[#4A3F35]'}
-                        textStyle={{
-                          fontSize: columns === 1 ? 15 : 13,
-                          fontFamily: 'Outfit-Medium',
-                          textAlign: 'center',
-                          flexWrap: 'wrap',
-                          flexShrink: 1,
-                          marginLeft: columns === 1 ? 0 : 8,
-                        }}
-                      />
-                    </View>
-                  );
-                }
-
+                const isSelected = isOther
+                  ? showSkinCustomInput
+                  : selectedSkinConcerns.includes(option.value);
                 return (
                   <View
                     key={option.id}
@@ -485,8 +519,6 @@ export default function SkinHairConditionScreen() {
                 );
               })}
             </View>
-
-            {/* Skin Custom Input Section */}
             {showSkinCustomInput && (
               <Animated.View
                 style={{
@@ -511,8 +543,7 @@ export default function SkinHairConditionScreen() {
             )}
           </View>
 
-          {/* ==================== HAIR SECTION ==================== */}
-          {/* Hair Type Section */}
+          {/* ── HAIR TYPE ── */}
           <View className="mb-6">
             <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
               Hair Type
@@ -523,10 +554,7 @@ export default function SkinHairConditionScreen() {
             <View className="gap-3">
               {HAIR_TYPE.map((option) => {
                 const isSelected = selectedHairType === option.value;
-                const activeColor = '#759A52';
-                const inactiveColor = '#361A0D';
-                const iconColor = isSelected ? activeColor : inactiveColor;
-
+                const iconColor = isSelected ? '#759A52' : '#361A0D';
                 return (
                   <PrimaryButton
                     key={option.id}
@@ -559,7 +587,7 @@ export default function SkinHairConditionScreen() {
             </View>
           </View>
 
-          {/* Hair Concerns Section */}
+          {/* ── HAIR CONCERNS ── */}
           <View className="mb-8">
             <Text className="font-outfit text-[18px] font-semibold text-titleTextColor">
               Hair Concerns
@@ -567,56 +595,13 @@ export default function SkinHairConditionScreen() {
             <Text className="mb-3 font-outfit text-[14px] text-titleTextColor">
               What hair concerns do you have? (Select all that apply)
             </Text>
-
-            {/* Hair Concerns Grid */}
             <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-              }}>
+              style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
               {allHairConcerns.map((option) => {
-                const isSelected = selectedHairConcerns.includes(option.value);
                 const isOther = option.value === 'hair_other';
-
-                if (isOther) {
-                  return (
-                    <View
-                      key={option.id}
-                      style={{
-                        width: columns === 1 ? '100%' : `${100 / columns - 2}%`,
-                        marginBottom: 12,
-                      }}>
-                      <PrimaryButton
-                        title={option.label}
-                        onPress={() => toggleHairConcern(option.value)}
-                        leftIcon={
-                          <CheckIconButton
-                            value={showHairCustomInput}
-                            onValueChange={() => toggleHairConcern(option.value)}
-                            activeColor="#759A52"
-                            inactiveColor="#361A0D"
-                            size={24}
-                            marginLeft={10}
-                          />
-                        }
-                        height={56}
-                        withShadow={true}
-                        gradientColors={['#E8DDD0', '#E8DDD0']}
-                        textClassName={showHairCustomInput ? 'text-[#759A52]' : 'text-[#4A3F35]'}
-                        textStyle={{
-                          fontSize: columns === 1 ? 15 : 13,
-                          fontFamily: 'Outfit-Medium',
-                          textAlign: 'center',
-                          flexWrap: 'wrap',
-                          flexShrink: 1,
-                          marginLeft: columns === 1 ? 0 : 8,
-                        }}
-                      />
-                    </View>
-                  );
-                }
-
+                const isSelected = isOther
+                  ? showHairCustomInput
+                  : selectedHairConcerns.includes(option.value);
                 return (
                   <View
                     key={option.id}
@@ -654,8 +639,6 @@ export default function SkinHairConditionScreen() {
                 );
               })}
             </View>
-
-            {/* Hair Custom Input Section */}
             {showHairCustomInput && (
               <Animated.View
                 style={{
@@ -680,7 +663,12 @@ export default function SkinHairConditionScreen() {
             )}
           </View>
 
-          <PrimaryButton title="Continue" onPress={handleNext} className="mb-3" />
+          <PrimaryButton
+            title={isSaving ? 'Saving...' : 'Continue'}
+            onPress={handleNext}
+            className="mb-3"
+            disabled={isSaving}
+          />
         </View>
       </ScrollView>
     </FormLayout>

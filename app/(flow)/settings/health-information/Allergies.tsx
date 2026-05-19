@@ -11,11 +11,19 @@ import ErrorScreen from '@/components/errors/ErrorScreen';
 import PrimaryVariantButton from '@/components/buttons/PrimaryVariantButton';
 import { InfoRow } from '@/components/personalInfo/InfoRow';
 import VectorBg from '@/components/VectorBg';
+import { useGetAllergiesQuery } from '@/store/api/onboardingApi';
 
 export default function AllergiesSettingsScreen() {
   const router = useRouter();
-  const [allergies, setAllergies] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const {
+    data: allergiesData,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetAllergiesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
@@ -23,70 +31,30 @@ export default function AllergiesSettingsScreen() {
     initialReady: false,
   });
 
-  useEffect(() => {
-    loadAllergies();
-  }, []);
-
-  const loadAllergies = async () => {
-    try {
-      // Using mock data - easier and no errors
-      // TODO: Replace with actual API call later
-      setTimeout(() => {
-        const mockData = ['Fragrance', 'Parabens', 'Nickel'];
-        setAllergies(mockData);
-        setIsLoading(false);
-      }, 500);
-    } catch (error) {
-      console.error('Error loading allergies:', error);
-      setAllergies([]);
-      setIsLoading(false);
-    }
-  };
+  const allergies = allergiesData?.allergies ?? [];
 
   const getDisplayText = () => {
-    if (!allergies || !Array.isArray(allergies)) {
-      return 'None';
-    }
-
-    if (allergies.length === 0) {
-      return 'None';
-    }
-
-    if (allergies.length === 1) {
-      return allergies[0];
-    }
-
-    if (allergies.length <= 3) {
-      return allergies.join(', ');
-    }
-
-    const firstThree = allergies.slice(0, 3);
-    return `${firstThree.join(', ')} +${allergies.length - 3} more`;
+    if (allergies.length === 0) return 'None';
+    if (allergies.length <= 3) return allergies.join(', ');
+    return `${allergies.slice(0, 3).join(', ')} +${allergies.length - 3} more`;
   };
 
-  const handleEdit = () => {
-    router.push('/(flow)/settings/health-information/edit/edit-allergies');
-  };
-
-  const handleRetry = () => {
-    router.replace('/(flow)/settings/health-information/Allergies');
-  };
+  const handleRetry = () => refetch();
 
   if (isRendering || isLoading) {
     return (
-      <SafeAreaView edges={['top', 'right']} className="flex-1 ">
-        {/* SVG Background */}
+      <SafeAreaView edges={['top', 'right']} className="flex-1">
         <VectorBg />
         <LoadingScreen loadingText="Loading allergies..." />
       </SafeAreaView>
     );
   }
 
-  if (renderError) {
+  if (renderError || isError) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
         <CustomHeader title="Allergies" height={50} backButton={true} />
-        <ErrorScreen message={renderError} onRetry={handleRetry} />
+        <ErrorScreen message={renderError ?? 'Failed to load.'} onRetry={handleRetry} />
       </SafeAreaView>
     );
   }
@@ -94,7 +62,6 @@ export default function AllergiesSettingsScreen() {
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader title="Allergies" height={50} backButton={true} />
-      {/* SVG Background */}
       <VectorBg />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -119,7 +86,7 @@ export default function AllergiesSettingsScreen() {
           />
 
           <PrimaryVariantButton
-            onPress={handleEdit}
+            onPress={() => router.push('/(flow)/settings/health-information/edit/edit-allergies')}
             borderTopLeftRadius={100}
             borderTopRightRadius={100}
             borderBottomLeftRadius={100}

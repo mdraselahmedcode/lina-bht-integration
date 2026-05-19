@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import FormLayout from '@/components/layouts/FormLayout';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
 import AuthFormTitle from '@/components/texts/auth/FormTitle';
@@ -13,59 +12,89 @@ import { PickerBottomSheet } from '@/components/personalInfo/PickerBottomSheet';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
 import { RoundedInfoRow } from '@/components/personalInfo/RoundedInfoRow';
+import { extractApiError } from '@/utils/apiError';
+import { useSavePersonalInfoMutation } from '@/store/api/onboardingApi';
 
-// Gender options
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const GENDERS = [
-  { id: 'female', label: 'Female', value: 'Female' },
-  { id: 'male', label: 'Male', value: 'Male' },
-  { id: 'non-binary', label: 'Non-binary', value: 'Non-binary' },
-  { id: 'prefer-not-to-say', label: 'Prefer not to say', value: 'Prefer not to say' },
+  { id: 'female', label: 'Female', value: 'female' },
+  { id: 'male', label: 'Male', value: 'male' },
+  { id: 'other', label: 'Non-binary', value: 'other' },
+  { id: 'other2', label: 'Prefer not to say', value: 'other' },
 ];
 
-// Language options
 const LANGUAGES = [
-  { id: 'en', label: 'English', value: 'English' },
-  { id: 'es', label: 'Spanish', value: 'Spanish' },
-  { id: 'fr', label: 'French', value: 'French' },
-  { id: 'de', label: 'German', value: 'German' },
-  { id: 'it', label: 'Italian', value: 'Italian' },
-  { id: 'pt', label: 'Portuguese', value: 'Portuguese' },
-  { id: 'zh', label: 'Chinese', value: 'Chinese' },
-  { id: 'ja', label: 'Japanese', value: 'Japanese' },
-  { id: 'ko', label: 'Korean', value: 'Korean' },
-  { id: 'ar', label: 'Arabic', value: 'Arabic' },
-  { id: 'hi', label: 'Hindi', value: 'Hindi' },
+  { id: 'en', label: 'English', value: 'en' },
+  { id: 'es', label: 'Spanish', value: 'es' },
+  { id: 'fr', label: 'French', value: 'fr' },
+  { id: 'de', label: 'German', value: 'de' },
+  { id: 'it', label: 'Italian', value: 'it' },
+  { id: 'pt', label: 'Portuguese', value: 'pt' },
+  { id: 'zh', label: 'Chinese', value: 'zh' },
+  { id: 'ja', label: 'Japanese', value: 'ja' },
+  { id: 'ko', label: 'Korean', value: 'ko' },
+  { id: 'ar', label: 'Arabic', value: 'ar' },
+  { id: 'hi', label: 'Hindi', value: 'hi' },
 ];
 
-// Country options
 const COUNTRIES = [
-  { id: 'us', label: 'United States', value: 'United States' },
-  { id: 'uk', label: 'United Kingdom', value: 'United Kingdom' },
-  { id: 'ca', label: 'Canada', value: 'Canada' },
-  { id: 'au', label: 'Australia', value: 'Australia' },
-  { id: 'de', label: 'Germany', value: 'Germany' },
-  { id: 'fr', label: 'France', value: 'France' },
-  { id: 'it', label: 'Italy', value: 'Italy' },
-  { id: 'es', label: 'Spain', value: 'Spain' },
-  { id: 'nl', label: 'Netherlands', value: 'Netherlands' },
-  { id: 'se', label: 'Sweden', value: 'Sweden' },
-  { id: 'no', label: 'Norway', value: 'Norway' },
-  { id: 'dk', label: 'Denmark', value: 'Denmark' },
-  { id: 'fi', label: 'Finland', value: 'Finland' },
-  { id: 'jp', label: 'Japan', value: 'Japan' },
-  { id: 'cn', label: 'China', value: 'China' },
-  { id: 'in', label: 'India', value: 'India' },
-  { id: 'br', label: 'Brazil', value: 'Brazil' },
-  { id: 'mx', label: 'Mexico', value: 'Mexico' },
-  { id: 'za', label: 'South Africa', value: 'South Africa' },
-  { id: 'ae', label: 'UAE', value: 'UAE' },
+  { id: 'us', label: 'United States', value: 'US' },
+  { id: 'uk', label: 'United Kingdom', value: 'GB' },
+  { id: 'ca', label: 'Canada', value: 'CA' },
+  { id: 'au', label: 'Australia', value: 'AU' },
+  { id: 'de', label: 'Germany', value: 'DE' },
+  { id: 'fr', label: 'France', value: 'FR' },
+  { id: 'it', label: 'Italy', value: 'IT' },
+  { id: 'es', label: 'Spain', value: 'ES' },
+  { id: 'nl', label: 'Netherlands', value: 'NL' },
+  { id: 'se', label: 'Sweden', value: 'SE' },
+  { id: 'no', label: 'Norway', value: 'NO' },
+  { id: 'dk', label: 'Denmark', value: 'DK' },
+  { id: 'fi', label: 'Finland', value: 'FI' },
+  { id: 'jp', label: 'Japan', value: 'JP' },
+  { id: 'cn', label: 'China', value: 'CN' },
+  { id: 'in', label: 'India', value: 'IN' },
+  { id: 'br', label: 'Brazil', value: 'BR' },
+  { id: 'mx', label: 'Mexico', value: 'MX' },
+  { id: 'za', label: 'South Africa', value: 'ZA' },
+  { id: 'ae', label: 'UAE', value: 'AE' },
+  { id: 'bd', label: 'Bangladesh', value: 'BD' },
 ];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** "2026-05-18" — what the API expects */
+const toISODateString = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+const calculateAge = (birthDate: Date): number => {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+/** Returns the label to display in the row from a value */
+const getLabelForValue = (
+  items: { id: string; label: string; value: string }[],
+  value: string | null
+) => {
+  if (!value) return 'Not selected';
+  return items.find((i) => i.value === value)?.label ?? value;
+};
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
   const { showError } = useToast();
 
-  // Form state
+  // Form state — values are what the API accepts (codes, not display labels)
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
@@ -76,88 +105,64 @@ export default function PersonalInfoScreen() {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
-  // Screen ready state
+  const [savePersonalInfo, { isLoading }] = useSavePersonalInfoMutation();
+
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
     delay: 100,
     initialReady: false,
   });
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return 'Not selected';
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
   const handleNext = async () => {
-    // Validate required fields
+    // ── Validation ──────────────────────────────────────────────────────────
+    if (!selectedCountry) {
+      showError('Please select your country');
+      return;
+    }
+    if (!selectedLanguage) {
+      showError('Please select your language');
+      return;
+    }
+    if (!dateOfBirth) {
+      showError('Please enter your date of birth');
+      return;
+    }
     if (!selectedGender) {
       showError('Please select your gender');
       return;
     }
 
-    if (!selectedCountry) {
-      showError('Please select your country');
-      return;
-    }
-
-    if (!selectedLanguage) {
-      showError('Please select your language');
-      return;
-    }
-
-    if (!dateOfBirth) {
-      showError('Please enter your date of birth');
-      return;
-    }
-
-    // Calculate age
-    const age = calculateAge(dateOfBirth);
-
-    if (age < 18) {
+    if (calculateAge(dateOfBirth) < 18) {
       showError('You must be 18 or older to use this app');
       return;
     }
 
+    // ── API call ─────────────────────────────────────────────────────────────
     try {
-      // Save to AsyncStorage
-      await AsyncStorage.setItem('user_gender', selectedGender);
-      await AsyncStorage.setItem('user_country', selectedCountry);
-      await AsyncStorage.setItem('user_language', selectedLanguage);
-      await AsyncStorage.setItem('user_date_of_birth', dateOfBirth.toISOString());
-      await AsyncStorage.setItem('user_age', age.toString());
+      await savePersonalInfo({
+        country: selectedCountry, // e.g. "US"
+        language: selectedLanguage, // e.g. "en"
+        date_of_birth: toISODateString(dateOfBirth), // e.g. "1995-08-04"
+        gender: selectedGender as 'male' | 'female' | 'other',
+      }).unwrap();
 
-      // Navigate to next screen in questionnaire flow
-      router.push('/(questionnaire)/life-phase');
-    } catch (error) {
-      console.error('Error saving personal info:', error);
-      showError('Failed to save. Please try again.');
+      // router.push('/(questionnaire)/life-phase');
+      if (selectedGender === 'male') {
+        router.push('/(questionnaire)/allergies');
+      } else {
+        router.push('/(questionnaire)/life-phase');
+      }
+    } catch (error: any) {
+      showError(extractApiError(error, 'Failed to save. Please try again.'));
     }
   };
 
-  const handleRetry = () => {
-    router.replace('/(questionnaire)/personal-info');
-  };
+  const handleRetry = () => router.replace('/(questionnaire)/personal-info');
 
-  // Show loading while screen is rendering
   if (isRendering) {
     return <LoadingScreen loadingText="Initializing your profile..." transparent={true} />;
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
@@ -183,11 +188,11 @@ export default function PersonalInfoScreen() {
             </Text>
           </View>
 
-          {/* Country Selection */}
+          {/* Country */}
           <View className="mb-3">
             <RoundedInfoRow
               label="Select your country"
-              value={selectedCountry || 'Not selected'}
+              value={getLabelForValue(COUNTRIES, selectedCountry)}
               onPress={() => setShowCountryPicker(true)}
               isEditing={true}
               topRounded={true}
@@ -196,11 +201,11 @@ export default function PersonalInfoScreen() {
             />
           </View>
 
-          {/* Language Selection */}
+          {/* Language */}
           <View className="mb-3">
             <RoundedInfoRow
               label="Select your language"
-              value={selectedLanguage || 'Not selected'}
+              value={getLabelForValue(LANGUAGES, selectedLanguage)}
               onPress={() => setShowLanguagePicker(true)}
               isEditing={true}
               topRounded={true}
@@ -228,12 +233,11 @@ export default function PersonalInfoScreen() {
                 onChange={setDateOfBirth}
                 maximumDate={new Date()}
                 minimumDate={new Date(1900, 0, 1)}
-                label="Date of Birth" // Add label here
-                placeholder="Select your date of birth" // Optional custom placeholder
+                label="Date of Birth"
+                placeholder="Select your date of birth"
               />
             </BorderlessShadowCard>
 
-            {/* Show calculated age if date selected */}
             {dateOfBirth && (
               <Text className="mt-2 text-start font-outfit text-[12px] text-[#759A52]">
                 Age: {calculateAge(dateOfBirth)} years
@@ -241,11 +245,11 @@ export default function PersonalInfoScreen() {
             )}
           </View>
 
-          {/* Gender Selection */}
+          {/* Gender */}
           <View className="mb-6">
             <RoundedInfoRow
               label="Select your gender"
-              value={selectedGender || 'Not selected'}
+              value={getLabelForValue(GENDERS, selectedGender)}
               onPress={() => setShowGenderPicker(true)}
               isEditing={true}
               topRounded={true}
@@ -254,12 +258,16 @@ export default function PersonalInfoScreen() {
             />
           </View>
 
-          {/* Next Button */}
-          <PrimaryButton title="Next" onPress={handleNext} className="mb-3" />
+          <PrimaryButton
+            title={isLoading ? 'Saving...' : 'Next'}
+            onPress={handleNext}
+            className="mb-3"
+            disabled={isLoading}
+            isLoading={isLoading}
+          />
         </View>
       </ScrollView>
 
-      {/* Gender Picker Bottom Sheet */}
       <PickerBottomSheet
         visible={showGenderPicker}
         onClose={() => setShowGenderPicker(false)}
@@ -272,7 +280,6 @@ export default function PersonalInfoScreen() {
         }}
       />
 
-      {/* Country Picker Bottom Sheet */}
       <PickerBottomSheet
         visible={showCountryPicker}
         onClose={() => setShowCountryPicker(false)}
@@ -285,7 +292,6 @@ export default function PersonalInfoScreen() {
         }}
       />
 
-      {/* Language Picker Bottom Sheet */}
       <PickerBottomSheet
         visible={showLanguagePicker}
         onClose={() => setShowLanguagePicker(false)}

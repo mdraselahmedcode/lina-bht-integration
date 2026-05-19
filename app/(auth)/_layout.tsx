@@ -38,6 +38,14 @@ export default function AuthLayout() {
         />
 
         <Stack.Screen
+          name="verify-code-s"
+          options={{
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
+
+        <Stack.Screen
           name="(forgot-password)"
           options={{
             animation: 'slide_from_right',

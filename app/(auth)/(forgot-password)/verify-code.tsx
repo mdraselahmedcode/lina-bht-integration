@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar, View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import FormLayout from '@/components/layouts/FormLayout';
 import VerificationWrapper from '@/components/VerificationWrapper';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
+import { useResendOtpMutation } from '@/store/api/authApi';
+import { useToast } from '@/hooks/useToast';
+import { extractApiError } from '@/utils/apiError';
 
 const ForgotPasswordOtp = () => {
   const { email } = useLocalSearchParams<{ email?: string }>();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { showError, showSuccess } = useToast();
+
+  // No verifyEmail here — OTP is verified as part of reset-password in the next step.
+  // We just collect the OTP and pass it forward as a route param.
+  const [resendOtp] = useResendOtpMutation();
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
@@ -17,18 +25,12 @@ const ForgotPasswordOtp = () => {
     initialReady: false,
   });
 
-  const handleRetry = () => {
-    router.replace('/(auth)/(forgot-password)/verify-code');
-  };
+  const handleRetry = () => router.replace('/(auth)/(forgot-password)/verify-code');
 
-  // Mark initial load as complete after first render
   useEffect(() => {
-    if (isContentReady && isInitialLoad) {
-      setIsInitialLoad(false);
-    }
+    if (isContentReady && isInitialLoad) setIsInitialLoad(false);
   }, [isContentReady]);
 
-  // Show initial render loading (useScreenReady) - ONLY on first load
   if (isRendering && isInitialLoad) {
     return (
       <FormLayout>
@@ -37,7 +39,6 @@ const ForgotPasswordOtp = () => {
     );
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
@@ -59,11 +60,22 @@ const ForgotPasswordOtp = () => {
           email={email}
           otpLength={6}
           onVerify={async (otp) => {
-            console.log('Forgot password OTP:', otp);
-            router.push('/(auth)/(forgot-password)/reset-password');
+            // Pass both email + otp to reset-password screen — no separate verify step
+            router.push({
+              pathname: '/(auth)/(forgot-password)/reset-password',
+              params: { email, otp },
+            });
           }}
-          resendOtp={async (email) => {
-            console.log('Resend OTP for forgot password:', email);
+          resendOtp={async (emailParam) => {
+            try {
+              await resendOtp({
+                email: emailParam || email || '',
+                purpose: 'forgot_password',
+              }).unwrap();
+              showSuccess('A new code has been sent to your email.');
+            } catch (error: any) {
+              showError(extractApiError(error, 'Failed to resend code.'));
+            }
           }}
         />
       </View>

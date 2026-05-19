@@ -1,23 +1,29 @@
-import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import ResetPasswordFields from '@/components/formFields/ResetPasswordFields';
 import FormLayout from '@/components/layouts/FormLayout';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
 import PasswordInput from '@/components/inputs/PasswordInput';
 import AuthFormTitle from '@/components/texts/auth/FormTitle';
 import { useToast } from '@/hooks/useToast';
-import { validateFields } from '@/utils.ts/formValidate';
+import { validateFields } from '@/utils/formValidate';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
+import { useResetPasswordMutation } from '@/store/api/authApi';
+import { extractApiError } from '@/utils/apiError';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  // email + otp passed from the verify-code screen
+  const { email, otp } = useLocalSearchParams<{ email?: string; otp?: string }>();
+
   const { showError, showSuccess } = useToast();
   const { fields, setFields } = ResetPasswordFields();
-  const [isResetting, setIsResetting] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
     dependencies: [],
@@ -26,14 +32,12 @@ export default function ResetPasswordScreen() {
   });
 
   const getField = (name: string) => fields.find((f) => f.name === name);
-
   const updateField = (name: string, value: string | number | boolean) => {
     setFields((prev) =>
       prev.map((field) => (field.name === name ? { ...field, value, error: false } : field))
     );
   };
 
-  // Use useMemo to compute values when fields change
   const password = useMemo(() => (getField('password')?.value as string) || '', [fields]);
   const confirmPassword = useMemo(
     () => (getField('confirmPassword')?.value as string) || '',
@@ -41,20 +45,23 @@ export default function ResetPasswordScreen() {
   );
 
   const handleReset = async () => {
-    // Validate all required fields
+    if (!email || !otp) {
+      showError('Session expired. Please start the forgot password flow again.');
+      router.replace('/(auth)/(forgot-password)/email');
+      return;
+    }
+
     const isValid = validateFields(fields, setFields);
     if (!isValid) {
       showError('Please fill in all required fields');
       return;
     }
 
-    // Validate password length
     if (password.length < 6) {
       showError('Password must be at least 6 characters long');
       return;
     }
 
-    // Validate password match
     if (password !== confirmPassword) {
       setFields((prev) =>
         prev.map((field) => (field.name === 'confirmPassword' ? { ...field, error: true } : field))
@@ -63,32 +70,26 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    setIsResetting(true);
     try {
-      // Simulate API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await resetPassword({
+        email,
+        otp,
+        new_password: password,
+      }).unwrap();
 
-      showSuccess('Password reset successful');
+      showSuccess('Password reset successfully! Please sign in.');
       router.replace('/(auth)/login');
-    } catch (error) {
-      showError('Failed to reset password. Please try again.');
-    } finally {
-      setIsResetting(false);
+    } catch (error: any) {
+      showError(extractApiError(error, 'Failed to reset password. Please try again.'));
     }
   };
 
-  const handleRetry = () => {
-    router.replace('/(auth)/(forgot-password)/reset-password');
-  };
+  const handleRetry = () => router.replace('/(auth)/(forgot-password)/reset-password');
 
-  // Mark initial load as complete after first render
   useEffect(() => {
-    if (isContentReady && isInitialLoad) {
-      setIsInitialLoad(false);
-    }
+    if (isContentReady && isInitialLoad) setIsInitialLoad(false);
   }, [isContentReady]);
 
-  // Show initial render loading (useScreenReady) - ONLY on first load
   if (isRendering && isInitialLoad) {
     return (
       <FormLayout>
@@ -97,7 +98,6 @@ export default function ResetPasswordScreen() {
     );
   }
 
-  // Show error if rendering failed
   if (renderError) {
     return (
       <FormLayout>
@@ -116,12 +116,11 @@ export default function ResetPasswordScreen() {
         }}>
         <View className="mb-10">
           <AuthFormTitle text="Set New Password" />
-          <Text className="text-center font-outfit text-[14px] text-titleTextColor/60 ">
+          <Text className="text-center font-outfit text-[14px] text-titleTextColor/60">
             Create a new password for your account
           </Text>
         </View>
 
-        {/* New Password Field */}
         <View className="mb-4">
           <PasswordInput
             placeHolder="Enter new password"
@@ -133,7 +132,6 @@ export default function ResetPasswordScreen() {
           />
         </View>
 
-        {/* Confirm Password Field */}
         <View className="mb-6">
           <PasswordInput
             placeHolder="Confirm new password"
@@ -145,13 +143,12 @@ export default function ResetPasswordScreen() {
           />
         </View>
 
-        {/* Reset Password Button */}
         <PrimaryButton
-          title={isResetting ? 'Resetting...' : 'Reset Password'}
+          title={isLoading ? 'Resetting...' : 'Reset Password'}
           onPress={handleReset}
           className="mt-6"
-          disabled={isResetting}
-          isLoading={isResetting}
+          disabled={isLoading}
+          isLoading={isLoading}
         />
       </View>
     </FormLayout>

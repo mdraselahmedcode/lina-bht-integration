@@ -9,7 +9,7 @@ const ForgotPasswordFields = () => {
       placeHolder: 'Enter your email',
       label: 'Email Address',
       error: false,
-      value: 'mdraselahmed.code@gmail.com',
+      value: '',
       required: true,
       keyboard: KeyboardType.EMAIL_ADDRESS,
     },
