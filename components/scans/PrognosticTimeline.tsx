@@ -9,12 +9,13 @@ export interface TimelineDay {
   id: string;
   title: string;
   subtitle: string;
-  metrics?: Array<{
+  metrics?: {
     label: string;
     value: string;
     color?: string;
-  }>;
-  imageUri?: string | number; // Allow both string and number (require)
+  }[];
+  // imageUri?: string | number; // Allow both string and number (require)
+  imageUri?: ImageSourcePropType;
   isFuture?: boolean;
   improvementPercentage?: number;
 }
@@ -41,23 +42,6 @@ export const PrognosticTimeline: React.FC<PrognosticTimelineProps> = ({
   if (!days || days.length === 0) {
     return null;
   }
-
-  // Helper to get image source correctly
-  const getImageSource = (imageUri?: string | number): ImageSourcePropType | null => {
-    if (!imageUri) return null;
-
-    // If it's a number (require result), return as is
-    if (typeof imageUri === 'number') {
-      return imageUri;
-    }
-
-    // If it's a string URL
-    if (typeof imageUri === 'string') {
-      return { uri: imageUri };
-    }
-
-    return null;
-  };
 
   // Helper to get gradient for future days
   const getFutureDayGradient = (improvementPercentage: number = 0) => {
@@ -144,7 +128,7 @@ export const PrognosticTimeline: React.FC<PrognosticTimelineProps> = ({
 
         {/* Timeline Items */}
         {days.map((day, index) => {
-          const imageSource = getImageSource(day.imageUri);
+          const imageSource = day.imageUri;
 
           return (
             <View key={day.id} style={{ padding: 12 }}>

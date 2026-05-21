@@ -18,6 +18,8 @@ export interface RoutineStep {
   time?: string; // 'morning', 'night', 'weekly'
   why?: string;
   created_at?: string;
+  is_completed?: boolean;
+  completed_at?: string | null;
 }
 
 export interface GeneratedRoutine {
@@ -61,6 +63,64 @@ export interface DeleteStepResponse {
   deleted_step_id: string;
 }
 
+export interface PatchStepResponse {
+  success: boolean;
+  step_id: string;
+  is_completed: boolean;
+  completed_at: string | null;
+  data: RoutineStep;
+}
+
+// ── Step details types ────────────────────────────────────────────────────────
+
+export interface RoutineStepDetailNutrition {
+  id: string;
+  name: string;
+  icon_url: string;
+  benefit: string;
+  tags: string[];
+  priority: number;
+}
+
+export interface RoutineStepDetailFood {
+  id: string;
+  name: string;
+  icon_url: string;
+  tags: string[];
+  score: number;
+}
+
+export interface RoutineStepDetailRecipe {
+  id: string;
+  name: string;
+  image_url: string;
+  description: string;
+  meal_type: string;
+  tags: string[];
+  score: number;
+}
+
+export interface RoutineStepDetailResponse {
+  video_url: string | null;
+  video_title: string | null;
+  reading_duration: string | null;
+  product: {
+    image_url: string | null;
+    category: string | null;
+    name: string | null;
+  };
+  text: string | null;
+  key_benefits: string[];
+  what_you_learn: string[];
+  key_nutrients: RoutineStepDetailNutrition[];
+  food_recommendation: RoutineStepDetailFood[];
+  recipe_recommendation: RoutineStepDetailRecipe[];
+}
+
+export interface GetRoutineStepDetailArg {
+  routine_id: string;
+}
+
 // ── Request arg types ─────────────────────────────────────────────────────────
 
 export interface GenerateRoutineArg {
@@ -75,17 +135,16 @@ export interface DeleteStepArg {
   step_id: string;
 }
 
+export interface PatchStepArg {
+  step_id: string;
+  is_completed: boolean;
+}
+
 export interface ManualRoutineArg {
   product_name: string;
   instruction: string;
   time: 'morning' | 'night' | 'weekly';
 }
-
-// export interface ManualRoutineResponse {
-//   saved: boolean;
-//   routine_step_id: string[];
-//   routine: GeneratedRoutine; // reuses your existing type
-// }
 
 export interface ManualRoutineResponse {
   saved: boolean;
@@ -107,19 +166,61 @@ export interface ManualRoutineResponse {
 export interface GetAllRoutinesResponse {
   success: boolean;
   count: number;
-  data: RoutineStep[]; // ← Note: data array, not steps
+  data: RoutineStep[];
+}
+
+export interface HairRoutineStep {
+  id: string;
+  phase: string;
+  product_category: string;
+  product_name: string | null;
+  product_url: string | null;
+  why: string;
+}
+
+export interface HairRoutineResponse {
+  scan_id: string;
+  routine_step_id: string[];
+  routine: {
+    why: string[];
+    morning: HairRoutineStep[];
+    night: HairRoutineStep[];
+    weekly_care: HairRoutineStep[];
+  };
+}
+
+export interface HairRoutineArg {
+  scan_id: string;
+}
+
+export interface FaceRoutineStep {
+  id: string;
+  phase: string;
+  product_category: string;
+  product_name: string | null;
+  product_url: string | null;
+  why: string;
+}
+
+export interface FaceRoutineResponse {
+  scan_id: string;
+  routine_step_id: string[];
+  routine: {
+    why: string[];
+    morning: FaceRoutineStep[];
+    night: FaceRoutineStep[];
+    weekly_care: FaceRoutineStep[];
+  };
+}
+
+export interface FaceRoutineArg {
+  scan_id: string;
 }
 
 // ── API slice ─────────────────────────────────────────────────────────────────
 
 export const routineApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    /**
-     * POST /generate/product-routine
-     * Generates an AI routine from a product scan ID.
-     * The same endpoint will later support face/hair scan IDs —
-     * pass the appropriate scan_id and update the url when those ship.
-     */
     generateProductRoutine: builder.mutation<GenerateRoutineResponse, GenerateRoutineArg>({
       query: (body) => ({
         url: '/generate/product-routine',
@@ -128,10 +229,6 @@ export const routineApi = baseApi.injectEndpoints({
       }),
     }),
 
-    /**
-     * POST /routine/save
-     * Saves a list of routine step IDs to the user's profile.
-     */
     saveRoutine: builder.mutation<SaveRoutineResponse, SaveRoutineArg>({
       query: (body) => ({
         url: '/routine/save',
@@ -140,10 +237,6 @@ export const routineApi = baseApi.injectEndpoints({
       }),
     }),
 
-    /**
-     * DELETE /routine/step/:step_id
-     * Removes a single step from the routine on the backend.
-     */
     deleteRoutineStep: builder.mutation<DeleteStepResponse, DeleteStepArg>({
       query: ({ step_id }) => ({
         url: `/routine/step/${step_id}`,
@@ -152,9 +245,17 @@ export const routineApi = baseApi.injectEndpoints({
     }),
 
     /**
-     * POST /generate/manual-routine/ai
-     * Generates an AI routine based on user input without requiring a product scan ID.
+     * PATCH /routine/step/:step_id/complete
+     * Toggles the is_completed flag for a routine step.
+     * Body { is_completed } will be re-added once backend supports it.
      */
+    patchRoutineStep: builder.mutation<PatchStepResponse, PatchStepArg>({
+      query: ({ step_id }) => ({
+        url: `/routine/step/${step_id}/complete`,
+        method: 'PATCH',
+      }),
+    }),
+
     generateManualRoutine: builder.mutation<ManualRoutineResponse, ManualRoutineArg>({
       query: (body) => ({
         url: '/generate/manual-routine/ai',
@@ -171,16 +272,39 @@ export const routineApi = baseApi.injectEndpoints({
       }),
     }),
 
-    /**
-     * GET /routine/all
-     * GET /routine/all
-     */
     getAllRoutines: builder.query<GetAllRoutinesResponse, void>({
       query: () => ({
         url: '/routine/all',
         method: 'GET',
       }),
       providesTags: ['Routine'],
+    }),
+
+    /**
+     * GET /routine/details/:routine_id
+     * Fetches rich details for a single routine step.
+     */
+    getRoutineStepDetails: builder.query<RoutineStepDetailResponse, GetRoutineStepDetailArg>({
+      query: ({ routine_id }) => ({
+        url: `/routine/details/${routine_id}`,
+        method: 'GET',
+      }),
+    }),
+
+    generateHairRoutine: builder.mutation<HairRoutineResponse, HairRoutineArg>({
+      query: (body) => ({
+        url: '/generate/scalp_hair',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    generateFaceRoutine: builder.mutation<FaceRoutineResponse, FaceRoutineArg>({
+      query: (body) => ({
+        url: '/generate/face',
+        method: 'POST',
+        body,
+      }),
     }),
   }),
   overrideExisting: false,
@@ -190,7 +314,11 @@ export const {
   useGenerateProductRoutineMutation,
   useSaveRoutineMutation,
   useDeleteRoutineStepMutation,
-  useGenerateManualRoutineMutation, // by ai routine generation like after scan
+  usePatchRoutineStepMutation,
+  useGenerateManualRoutineMutation,
   useManualRoutineMutation,
   useGetAllRoutinesQuery,
+  useGetRoutineStepDetailsQuery,
+  useGenerateHairRoutineMutation,
+  useGenerateFaceRoutineMutation,
 } = routineApi;

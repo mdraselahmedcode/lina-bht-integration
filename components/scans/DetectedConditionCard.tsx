@@ -13,7 +13,8 @@ export interface DetectedCondition {
   progressColor?: string[];
   imageUri?: string;
   imageSource?: ImageSourcePropType;
-  ImageUri?: string; // Added: for showing face area
+  // ImageUri?: string; // Added: for showing face area
+  ImageUri?: ImageSourcePropType; // Added: for showing face area
   faceArea?: { x: number; y: number; width: number; height: number }; // Added: for highlighting specific area
 }
 
@@ -63,10 +64,10 @@ export const DetectedConditionCard: React.FC<DetectedConditionCardProps> = ({
   const badgeStyle = getSeverityBadgeStyle();
 
   // Determine which image to show
-  const imageToShow =
+  const imageToShow: ImageSourcePropType | null =
     showFaceImage && condition.ImageUri
       ? condition.ImageUri
-      : condition.imageUri || condition.imageSource;
+      : (condition.imageSource ?? (condition.imageUri ? { uri: condition.imageUri } : null));
 
   return (
     <View
@@ -87,7 +88,7 @@ export const DetectedConditionCard: React.FC<DetectedConditionCardProps> = ({
           borderWidth: 1,
           borderColor: '#FFFFFF99',
         }}>
-        {imageToShow ? (
+        {/* {imageToShow ? (
           typeof imageToShow === 'string' ? (
             <Image
               source={{ uri: imageToShow }}
@@ -101,6 +102,17 @@ export const DetectedConditionCard: React.FC<DetectedConditionCardProps> = ({
               resizeMode="cover"
             />
           )
+        ) : (
+          <View className="h-full w-full items-center justify-center bg-[#D4C5B0]">
+            <Text className="font-outfit text-[10px] text-[#2E211799]">No image</Text>
+          </View>
+        )} */}
+        {imageToShow ? (
+          <Image
+            source={imageToShow}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
+          />
         ) : (
           <View className="h-full w-full items-center justify-center bg-[#D4C5B0]">
             <Text className="font-outfit text-[10px] text-[#2E211799]">No image</Text>

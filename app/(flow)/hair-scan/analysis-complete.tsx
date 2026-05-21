@@ -1,22 +1,13 @@
-// app/(flow)/hair-scan/ai-analysis-complete.tsx
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  ActivityIndicator,
-  useWindowDimensions,
-  TouchableOpacity,
-} from 'react-native';
+// const styles = StyleSheet.create({});
+
+// app/(flow)/hair-scan/analysis-complete.tsx
+import { ImageSourcePropType, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
-import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
 import PrimaryButton from '@/components/buttons/PrimaryButton';
-import { AngleCapture } from '@/components/scans/MultiAngleCameraScan';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import AnalysingResultScoreCard from '@/components/scans/AnalysingResultScoreCard';
 import { DetectedConditionsList } from '@/components/scans/DetectedConditionsList';
@@ -33,263 +24,262 @@ import { KeyNutrientsSection, Nutrient } from '@/components/scans/KeyNutrientsSe
 import { HydrationTargetCard } from '@/components/scans/HydrationTargetCard';
 import { RecommendedArticles } from '@/components/scans/RecommendedArticles';
 import { SAMPLE_ARTICLES } from '@/constants/sampleArticles';
+import LoadingScreen from '@/components/loading/LoadingScreen';
+import ErrorScreen from '@/components/errors/ErrorScreen';
+import { HairScanResponse } from '@/store/api/scanApi';
 
-// Hair analysis stats
-const HAIR_STATS = [
-  { label: 'Scalp Health', value: '72', color: '#60A5FA' },
-  { label: 'Hair Density', value: '68', color: '#4ADE80' },
-  { label: 'Breakage', value: '45', color: '#FB7185' },
-  { label: 'Oiliness', value: '55', color: '#FBBF24' },
-  { label: 'Dandruff', value: '35', color: '#A78BFA' },
-];
+// ── Severity normaliser ───────────────────────────────────────────────────────
+// In hair analysis-complete.tsx, update normaliseSeverity:
+const normaliseSeverity = (raw: string): 'Low' | 'Medium' | 'High' => {
+  switch (raw.toLowerCase()) {
+    case 'severe':
+    case 'high':
+      return 'High';
+    case 'moderate':
+    case 'medium':
+      return 'Medium';
+    default:
+      return 'Low';
+  }
+};
 
-// Static lifestyle factors data for hair
-const LIFESTYLE_FACTORS: LifestyleFactor[] = [
-  {
-    id: 'stress',
-    label: 'Stress Score',
-    value: 62,
-    gradientColors: ['#FBBF24', '#D97706'],
-  },
-  {
-    id: 'water',
-    label: 'Water Intake',
-    value: 74,
-    gradientColors: ['#60A5FA', '#2563EB'],
-  },
-  {
-    id: 'sleep',
-    label: 'Sleep Quality',
-    value: 68,
-    gradientColors: ['#7A8B6A', '#059669'],
-  },
-];
+// ── Progress colour per severity ──────────────────────────────────────────────
+const severityGradient = (severity: string): [string, string] => {
+  switch (severity.toLowerCase()) {
+    case 'severe':
+      return ['#F87171', '#DC2626'];
+    case 'moderate':
+    case 'medium':
+      return ['#FBBF24', '#D97706'];
+    default:
+      return ['#60A5FA', '#2563EB'];
+  }
+};
 
-// Static nutrients data - just like the others!
-const NUTRIENTS_DATA: Nutrient[] = [
-  {
-    id: 'omega-3',
-    name: 'Omega-3',
-    description: 'Reduces inflammation, strengthens the skin barrier and improves hydration.',
-    imageUrl: require('@/assets/images/nutrition_static_images/omega-3.png'),
-  },
-  {
-    id: 'zinc',
-    name: 'Zinc',
-    description: 'Supports skin healing, reduces inflammation, and helps with acne management.',
-    imageUrl: require('@/assets/images/nutrition_static_images/zinc.png'),
-  },
-  {
-    id: 'vitamin-c',
-    name: 'Vitamin C',
-    description: 'Boosts collagen production, brightens skin, and provides antioxidant protection.',
-    imageUrl: require('@/assets/images/nutrition_static_images/vitamin-c.png'),
-  },
-  {
-    id: 'magnesium',
-    name: 'Magnesium',
-    description:
-      'Supports skin cell repair, balances the microbiome, and calms persistent inflammation.',
-    imageUrl: require('@/assets/images/nutrition_static_images/magnesium.png'),
-  },
-];
+const severityProgress = (severity: string): number => {
+  switch (severity.toLowerCase()) {
+    case 'severe':
+      return 85;
+    case 'moderate':
+      return 55;
+    default:
+      return 30;
+  }
+};
 
-// Static recommendation food data
-const RECOMMENDED_FOODS_DATA: RecommendedFood[] = [
-  {
-    id: 'avocado',
-    name: 'Avocado',
-    description: 'Healthy fats',
-    imageUrl: require('@/assets/images/nutrition_static_images/avocado.png'),
-  },
-  {
-    id: 'salmon',
-    name: 'Salmon',
-    description: 'Omega-3',
-    imageUrl: require('@/assets/images/nutrition_static_images/salmon.png'),
-  },
-  {
-    id: 'blueberries',
-    name: 'Blueberries',
-    description: 'Antioxidants',
-    imageUrl: require('@/assets/images/nutrition_static_images/blueberries.png'),
-  },
-  {
-    id: 'spinach',
-    name: 'Spinach',
-    description: 'Magnesium',
-    imageUrl: require('@/assets/images/nutrition_static_images/spinach.png'),
-  },
-  {
-    id: 'chiaseeds',
-    name: 'Chia Seeds',
-    description: 'Antioxidants',
-    imageUrl: require('@/assets/images/nutrition_static_images/chiaseeds.png'),
-  },
-  {
-    id: 'almonds',
-    name: 'Almonds',
-    description: 'Vitamin E',
-    imageUrl: require('@/assets/images/nutrition_static_images/almonds.png'),
-  },
-];
-
-const RECOMMENDED_RECIPES_DATA: RecommendedRecipe[] = [
-  {
-    id: 'avocado-smoothie',
-    title: 'Avocado & Berry Smoothie',
-    description: 'Packed with healthy fats and antioxidants for glowing skin.',
-    imageUrl: require('@/assets/images/nutrition_static_images/recipe_1.jpg'),
-    tags: ['Breakfast', 'Quick'],
-  },
-  {
-    id: 'salmon-bowl',
-    title: 'Omega-3 Salmon Bowl',
-    description: 'Rich in omega-3 fatty acids to reduce inflammation.',
-    imageUrl: require('@/assets/images/nutrition_static_images/recipe_2.jpg'),
-    tags: ['Lunch', 'High Protein'],
-  },
-  {
-    id: 'berry-parfait',
-    title: 'Antioxidant Berry Parfait',
-    description: 'Loaded with vitamin C and antioxidants for skin repair.',
-    imageUrl: require('@/assets/images/nutrition_static_images/recipe_3.jpg'),
-    tags: ['Breakfast', 'Dessert'],
-  },
-  {
-    id: 'spinach-salad',
-    title: 'Magnesium Rich Spinach Salad',
-    description: 'Supports skin cell repair and reduces inflammation.',
-    // imageUrl: require('@/assets/images/nutrition_static_images/recipe_2.jpg'),
-    imageUrl:
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSviMY8z9K4g1wxRIUBbyTZ5B8lWTN6_ECvjQ&s',
-    tags: ['Lunch', 'Vegetarian'],
-  },
-  {
-    id: 'chia-pudding',
-    title: 'Chia Seed Pudding',
-    description: 'Rich in omega-3 and fiber for skin health.',
-    imageUrl:
-      'https://images.immediate.co.uk/production/volatile/sites/30/2022/08/Fish-Tacos-1337495.jpg?quality=90&resize=708,643',
-    tags: ['Breakfast', 'Dairy-Free'],
-  },
-];
+// ── Fallback image ────────────────────────────────────────────────────────────
+const FALLBACK_HAIR_IMAGE = require('@/assets/images/hair_scalp_analysis_sample_image.jpg');
 
 const HairAnalysisCompleteScreen = () => {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const { captures: capturesParam } = useLocalSearchParams();
-  const [captures, setCaptures] = useState<AngleCapture[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { scanResult, imageUri } = useLocalSearchParams<{
+    scanResult?: string;
+    imageUri?: string;
+  }>();
+
+  const [data, setData] = useState<HairScanResponse | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const { isRendering, isContentReady, renderError } = useScreenReady({
-    dependencies: [captures],
+    dependencies: [data],
     delay: 100,
     initialReady: false,
   });
 
-  // Use captured image if available, else fallback to sample
-  const hairImageUri =
-    captures.length > 0
-      ? { uri: captures[0].uri }
-      : require('@/assets/images/hair_scalp_analysis_sample_image.jpg');
+  useEffect(() => {
+    if (!scanResult) {
+      setParseError('No scan result received.');
+      return;
+    }
+    try {
+      setData(JSON.parse(scanResult));
+    } catch {
+      setParseError('Could not read scan result.');
+    }
+  }, [scanResult]);
 
-  // Define detected conditions data for hair
-  const detectedConditions: DetectedCondition[] = [
-    {
-      id: 'dry_scalp',
-      title: 'Dry Scalp',
-      severity: 'Medium',
-      description: 'Visible flaking and dryness on the scalp surface.',
-      progressValue: 65,
-      progressColor: ['#FBBF24', '#D97706'],
-      ImageUri: hairImageUri,
-    },
-    {
-      id: 'hair_fall',
-      title: 'Hair Fall',
-      severity: 'Medium',
-      description: 'Increased hair shedding noticed.',
-      progressValue: 55,
-      progressColor: ['#FBBF24', '#D97706'],
-      ImageUri: hairImageUri,
-    },
-    {
-      id: 'breakage',
-      title: 'Breakage',
-      severity: 'Low',
-      description: 'Minor breakage observed at the ends.',
-      progressValue: 35,
-      progressColor: ['#60A5FA', '#2563EB'],
-      ImageUri: hairImageUri,
-    },
-  ];
+  // ── Derive the captured image source ─────────────────────────────────────
+  // const capturedImageSource = imageUri ? { uri: imageUri } : FALLBACK_HAIR_IMAGE;
+  const capturedImageSource: ImageSourcePropType = imageUri
+    ? { uri: imageUri }
+    : FALLBACK_HAIR_IMAGE;
 
-  // Define prognostic days for hair
-  const prognosticDays: TimelineDay[] = [
-    {
-      id: 'today',
-      title: 'Today',
-      subtitle: '(Current Condition)',
-      imageUri: hairImageUri,
-      isFuture: false,
-    },
-    {
-      id: 'day7',
-      title: '+7 Days',
-      subtitle: '(Prediction 1)',
-      metrics: [
-        { label: 'Scalp Health', value: '+15%', color: '#10B981' },
-        { label: 'Dandruff', value: '-10%', color: '#10B981' },
-      ],
-      imageUri: hairImageUri,
-      isFuture: true,
-      improvementPercentage: 15,
-    },
-    {
-      id: 'day14',
-      title: '+14 Days',
-      subtitle: '(Prediction 2)',
-      metrics: [
-        { label: 'Hair Strength', value: '+20%', color: '#10B981' },
-        { label: 'Breakage', value: '-25%', color: '#10B981' },
-      ],
-      imageUri: hairImageUri,
-      isFuture: true,
-      improvementPercentage: 20,
-    },
-  ];
-
-  const getRecommendedHairArticles = () => {
-    // Filter articles relevant to hair/scalp and take first 2
-    const articlesToShow = SAMPLE_ARTICLES.filter(
-      (article) =>
-        article.title.toLowerCase().includes('hair') ||
-        article.category.toLowerCase().includes('hair') ||
-        article.title.toLowerCase().includes('scalp') ||
-        article.description.toLowerCase().includes('hair')
-    ).slice(0, 2); // Maximum 2 articles
-
-    // If no hair articles, take first 2 from all
-    const finalArticles = articlesToShow.length > 0 ? articlesToShow : SAMPLE_ARTICLES.slice(0, 2);
-
-    return finalArticles.map((article) => ({
-      id: article.id,
-      title: article.title,
-      description: article.description,
-      readTime: article.readTime,
-      category: article.category,
-      imageUrl: { uri: article.imageUrl },
-    }));
+  // ── Score card stats from checked_area ───────────────────────────────────
+  const STAT_COLORS: Record<string, string> = {
+    dandruff: '#FB7185',
+    fungal_activity: '#A78BFA',
+    microbiome_balance: '#4ADE80',
+    sebum_level: '#FBBF24',
+    oiliness: '#60A5FA',
+    thinning: '#FB7185',
+    hair_density: '#4ADE80',
+    follicles_health: '#60A5FA',
+    scalp_elasticity: '#A78BFA',
   };
 
-  const recommendedArticles = getRecommendedHairArticles();
+  const hairStats = data
+    ? Object.entries(data.analysis.checked_area).map(([key, value]) => ({
+        label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        value: String(value),
+        color: STAT_COLORS[key] ?? '#977857',
+      }))
+    : [];
 
+  // ── Detected conditions ───────────────────────────────────────────────────
+  const detectedConditions: DetectedCondition[] = (data?.analysis.detected_condition ?? []).map(
+    (c) => ({
+      id: c.name,
+      title: c.name.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase()),
+      severity: normaliseSeverity(c.severity),
+      description: c.note,
+      progressValue: severityProgress(c.severity),
+      progressColor: severityGradient(c.severity),
+      ImageUri: capturedImageSource,
+    })
+  );
+
+  // ── Lifestyle factors ─────────────────────────────────────────────────────
+  const lifestyleFactors: LifestyleFactor[] = data
+    ? [
+        {
+          id: 'stress',
+          label: 'Stress Impact',
+          value: data.analysis.lifestyle_factor.stress_impact,
+          gradientColors: ['#FBBF24', '#D97706'],
+        },
+        {
+          id: 'hygiene',
+          label: 'Hygiene Score',
+          value: data.analysis.lifestyle_factor.hygiene_score,
+          gradientColors: ['#60A5FA', '#2563EB'],
+        },
+        {
+          id: 'dietary',
+          label: 'Dietary Factor',
+          value: data.analysis.lifestyle_factor.dietary_factor,
+          gradientColors: ['#7A8B6A', '#059669'],
+        },
+      ]
+    : [];
+
+  // ── Prognosis timeline ────────────────────────────────────────────────────
+  const prognosticDays: TimelineDay[] = data
+    ? [
+        {
+          id: 'today',
+          title: 'Today',
+          subtitle: '(Current Condition)',
+          imageUri: capturedImageSource as any,
+          isFuture: false,
+        },
+        {
+          id: 'day7',
+          title: '+7 Days',
+          subtitle: '(Prediction 1)',
+          imageUri: capturedImageSource as any,
+          isFuture: true,
+          improvementPercentage: 15,
+          metrics: Object.entries(data.analysis.prognosis_timeline.seven_days).map(
+            ([key, value]) => ({
+              label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+              value: `${value}%`,
+              color: '#10B981',
+            })
+          ),
+        },
+        {
+          id: 'day14',
+          title: '+14 Days',
+          subtitle: '(Prediction 2)',
+          imageUri: capturedImageSource as any,
+          isFuture: true,
+          improvementPercentage: 25,
+          metrics: Object.entries(data.analysis.prognosis_timeline.fourteen_days).map(
+            ([key, value]) => ({
+              label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+              value: `${value}%`,
+              color: '#10B981',
+            })
+          ),
+        },
+      ]
+    : [];
+
+  // ── Nutrients ─────────────────────────────────────────────────────────────
+  const nutrients: Nutrient[] = (data?.nutritions ?? []).map((n) => ({
+    id: n.id,
+    name: n.name,
+    description: n.benefit,
+    imageUrl: n.icon_url,
+  }));
+
+  // ── Foods ─────────────────────────────────────────────────────────────────
+  const recommendedFoods: RecommendedFood[] = (data?.foods ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    description: f.tags.join(', '),
+    imageUrl: f.icon_url,
+  }));
+
+  // ── Recipes ───────────────────────────────────────────────────────────────
+  const recommendedRecipes: RecommendedRecipe[] = (data?.recipes ?? []).map((r) => ({
+    id: r.id,
+    title: r.name,
+    description: r.description,
+    imageUrl: r.image_url,
+    tags: [r.meal_type.charAt(0).toUpperCase() + r.meal_type.slice(1), ...r.tags],
+  }));
+
+  // ── Articles (same filter as before) ─────────────────────────────────────
+  const recommendedArticles = SAMPLE_ARTICLES.filter(
+    (a) =>
+      a.title.toLowerCase().includes('hair') ||
+      a.category.toLowerCase().includes('hair') ||
+      a.title.toLowerCase().includes('scalp')
+  )
+    .slice(0, 2)
+    .map((a) => ({
+      id: a.id,
+      title: a.title,
+      description: a.description,
+      readTime: a.readTime,
+      category: a.category,
+      imageUrl: { uri: a.imageUrl },
+    }));
+
+  // ── Guards ────────────────────────────────────────────────────────────────
+  if (isRendering && !data) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Preparing your hair analysis..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (renderError || parseError) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <CustomHeader title="Hair Analysis" height={50} backButton />
+        <ErrorScreen
+          message={renderError ?? parseError ?? 'Unknown error'}
+          onRetry={() => router.back()}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (!data) {
+    return (
+      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
+        <LoadingScreen loadingText="Loading..." />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-      <CustomHeader title="Hair Analysis Complete" height={50} backButton />
+      <CustomHeader title="Hair & Scalp Analysis" height={50} backButton />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -306,64 +296,39 @@ const HairAnalysisCompleteScreen = () => {
             transform: [{ translateY: isContentReady ? 0 : 10 }],
           }}>
           {/* Score Card */}
-          <AnalysingResultScoreCard stats={HAIR_STATS} title="Hair & Scalp Score Profile" />
+          <AnalysingResultScoreCard
+            stats={hairStats}
+            title="Hair & Scalp Score Profile"
+            overallScore={data.analysis.overall_score}
+          />
 
           <View className="mt-6" />
-          {/* Captured Angles Preview */}
-          {captures.length > 0 && (
-            <View>
-              <Text className="mb-2 text-start font-outfitMedium text-[16px] text-[#2E2117]">
-                Captured Angles
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
-                <View className="flex-row gap-2 p-2">
-                  {captures.map((capture, idx) => (
-                    <BorderlessShadowCard
-                      key={idx}
-                      b_tl={12}
-                      b_tr={12}
-                      b_bl={12}
-                      b_br={12}
-                      style={{
-                        padding: 8,
-                        width: 80,
-                        alignItems: 'center',
-                      }}>
-                      <Image
-                        source={{ uri: capture.uri }}
-                        style={{ width: 60, height: 60, borderRadius: 30 }}
-                      />
-                      <Text className="mt-1 font-outfit text-[10px] capitalize text-[#2A2118]">
-                        {capture.angle}
-                      </Text>
-                    </BorderlessShadowCard>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
+
+          {/* Hair Analysis Summary Card */}
+          <HairAnalysisCards
+            hairImageUri={capturedImageSource}
+            scalpHealth={data.analysis.scalp_health}
+            flakinessScore={data.analysis.visible_area.score}
+            flakinessProgress={data.analysis.visible_area.score}
+            flakinessLabel={
+              data.analysis.visible_area.condition
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (c) => c.toUpperCase()) + ' Pattern'
+            }
+          />
+
+          {/* Detected Conditions */}
+          {detectedConditions.length > 0 && (
+            <DetectedConditionsList
+              conditions={detectedConditions}
+              title="Detected Conditions"
+              showIcon={true}
+              showFaceImages={true}
+            />
           )}
 
-          {/* Hair Analysis Cards */}
-          {/* <HairAnalysisCards hairImageUri={hairImageUri} scalpHealth={72} /> */}
-
-          <HairAnalysisCards
-            hairImageUri={hairImageUri}
-            scalpHealth={72}
-            flakinessScore={35}
-            flakinessProgress={35}
-            flakinessLabel="Flakiness Pattern"
-          />
-
-          {/* Detected Conditions Section */}
-          <DetectedConditionsList
-            conditions={detectedConditions}
-            title="Detected Conditions"
-            showIcon={true}
-            showFaceImages={true}
-          />
-
-          {/* Lifestyle Factors Section */}
-          <LifestyleFactors factors={LIFESTYLE_FACTORS} title="Lifestyle Factors" showIcon={true} />
+          {/* Lifestyle Factors */}
+          <LifestyleFactors factors={lifestyleFactors} title="Lifestyle Factors" showIcon={true} />
 
           {/* Prognostic Timeline */}
           <PrognosticTimeline
@@ -374,68 +339,71 @@ const HairAnalysisCompleteScreen = () => {
             showIcon={true}
           />
 
-          {/* Key Nutrients for Your Skin - Using static data like the others */}
-          <KeyNutrientsSection
-            nutrients={NUTRIENTS_DATA}
-            title="Key Nutrients for Your Skin"
-            showIcon={true}
-          />
+          {/* Nutrients */}
+          {nutrients.length > 0 && (
+            <KeyNutrientsSection
+              nutrients={nutrients}
+              title="Key Nutrients for Hair Health"
+              showIcon={true}
+            />
+          )}
 
           {/* Food Recommendations */}
-          <FoodRecommendationSection
-            recommendedFoods={RECOMMENDED_FOODS_DATA}
-            title="Your Food Recommendations"
-            showIcon={true}
-          />
+          {recommendedFoods.length > 0 && (
+            <FoodRecommendationSection
+              recommendedFoods={recommendedFoods}
+              title="Your Food Recommendations"
+              showIcon={true}
+            />
+          )}
 
-          {/* Recipes Skin */}
-          <RecipesSection
-            recommendedRecipes={RECOMMENDED_RECIPES_DATA}
-            title="Recipes for Your Skin"
-            showIcon={true}
-            onRecipePress={(recipe) => {
-              console.log('Recipe pressed:', recipe.title);
-              // Navigate to recipe details
-            }}
-          />
+          {/* Recipes */}
+          {recommendedRecipes.length > 0 && (
+            <RecipesSection
+              recommendedRecipes={recommendedRecipes}
+              title="Recipes for Hair Health"
+              showIcon={true}
+            />
+          )}
 
+          {/* Hydration */}
           <HydrationTargetCard
             goal="2.4L of Water"
-            description="Drinking enough water helps flush inflammatory markers and revitalizes areas detected in your scan."
+            description="Proper hydration supports scalp moisture balance and reduces flakiness."
             title="Hydration Target"
-            iconSize={20}
-            iconColor="#A68A61"
           />
 
-          {/* Recommended Articles Section */}
+          {/* Articles */}
           {recommendedArticles.length > 0 && (
             <RecommendedArticles
               articles={recommendedArticles}
               title="Recommended for You"
               showIcon={true}
-              onArticlePress={(article) => {
-                console.log('Article pressed:', article.title);
+              onArticlePress={(article) =>
                 router.push({
                   pathname: '/(flow)/learn-article/[id]',
                   params: { id: article.id },
-                });
-              }}
+                })
+              }
             />
           )}
 
-          {/* Button */}
+          {/* CTA */}
           <PrimaryButton
             title="Generate Your Routine"
-            onPress={() => {
-              router.push('/(flow)/routines/ai-routine-generate/ai-routine');
-            }}
+            onPress={() =>
+              router.push({
+                pathname: '/(flow)/routines/ai-routine-generate/hair-routine', // ← new screen
+                params: {
+                  scan_id: data.scan_id,
+                },
+              })
+            }
             style={{ marginTop: 32 }}
           />
 
           <TouchableOpacity
-            onPress={() => {
-              router.push('/(main)');
-            }}
+            onPress={() => router.push('/(main)')}
             activeOpacity={0.6}
             className="mt-4 py-5">
             <Text className="text-center font-outfitMedium text-[20px] text-[#361A0D]">
@@ -449,5 +417,3 @@ const HairAnalysisCompleteScreen = () => {
 };
 
 export default HairAnalysisCompleteScreen;
-
-const styles = StyleSheet.create({});

@@ -64,7 +64,7 @@ export const SkinProgressCard: React.FC<SkinProgressCardProps> = ({ onPress }) =
   const [isPressed, setIsPressed] = useState(false);
 
   return (
-    <ShadowCard b_bl={24} b_br={24} b_tl={0} b_tr={0} style={{ marginTop: 16 }}>
+    <ShadowCard b_bl={24} b_br={24} b_tl={0} b_tr={0} style={{ marginTop: 16, overflow: 'hidden' }}>
       <TouchableOpacity
         activeOpacity={1}
         onPress={onPress}
@@ -86,14 +86,15 @@ export const SkinProgressCard: React.FC<SkinProgressCardProps> = ({ onPress }) =
           <SkinProgressIcon size={18} color="#7A8B6A" />
         </BorderlessShadowCard>
         <View className="flex-1 flex-row items-center gap-3">
-          <View>
-            <Text className="font-outfitMedium text-[14px] text-[#2A2118]">Skin Progress</Text>
+          <View style={{ maxWidth: '60%' }}>
+            <Text className="font-outfitMedium text-[14px] text-[#2A2118]">Track Progress</Text>
             <TextBodySmall
               style={{ fontFamily: 'Outfit-Regular', color: '#7A8B6A' }}
-              text="+2 pts this week"
+              // text="+2 pts this week"
+              text="Check out progress over time"
             />
           </View>
-          <DotWideIcon strokeColor="#2A2118" fillColor="#C9A96E" width={102} height={28} />
+          <DotWideIcon strokeColor="#2A2118" fillColor="#C9A96E" width={60} height={18} />
         </View>
         <Ionicons name="chevron-forward" size={16} color="#C8A97E" />
       </TouchableOpacity>

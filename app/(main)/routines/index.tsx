@@ -1,5 +1,5 @@
 // // app/(main)/routines/index.tsx
-// import { ScrollView, StyleSheet, Text, View } from 'react-native';
+// import { ScrollView, Text, View, RefreshControl } from 'react-native';
 // import React, { useState, useEffect, useMemo, useCallback } from 'react';
 // import { SafeAreaView } from 'react-native-safe-area-context';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,7 +13,6 @@
 // import { RoutineTabBar } from '@/components/routines/RoutineTabButton';
 // import { AddRoutineBottomSheet } from '@/components/routines/AddRoutineBottomSheet';
 // import { useToast } from '@/hooks/useToast';
-// import { useScreenReady } from '@/hooks/useScreenReady';
 // import LoadingScreen from '@/components/loading/LoadingScreen';
 // import ErrorScreen from '@/components/errors/ErrorScreen';
 // import { useGetAllRoutinesQuery, useDeleteRoutineStepMutation } from '@/store/api/routineApi';
@@ -21,32 +20,23 @@
 
 // type RoutineType = 'morning' | 'night' | 'weekly';
 
-// // Helper function to extract error message
 // const getErrorMessage = (error: any): string => {
 //   if (!error) return 'An error occurred';
-
 //   if ('data' in error && error.data && typeof error.data === 'object' && 'message' in error.data) {
 //     return error.data.message as string;
 //   }
-
-//   if ('message' in error && typeof error.message === 'string') {
-//     return error.message;
-//   }
-
-//   if (typeof error === 'string') {
-//     return error;
-//   }
-
-//   return 'An error occurred';
+//   if ('message' in error && typeof error.message === 'string') return error.message;
+//   if (typeof error === 'string') return error;
+//   return 'Could not load routines. Pull down to refresh.';
 // };
 
 // const Routines = () => {
 //   const [activeRoutine, setActiveRoutine] = useState<RoutineType>('morning');
 //   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
 //   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+//   const [isRefreshing, setIsRefreshing] = useState(false);
 //   const { showSuccess, showError } = useToast();
 
-//   // Fetch routines from API
 //   const {
 //     data: routinesData,
 //     isLoading,
@@ -59,7 +49,6 @@
 
 //   const [deleteStep] = useDeleteRoutineStepMutation();
 
-//   // Load/save completed state from AsyncStorage (UI-only state)
 //   useEffect(() => {
 //     loadProgress();
 //   }, []);
@@ -71,77 +60,50 @@
 //   const loadProgress = async () => {
 //     try {
 //       const saved = await AsyncStorage.getItem('routineProgress');
-//       if (saved) {
-//         setCompletedSteps(JSON.parse(saved));
-//       }
-//     } catch (error) {
-//       console.error('Error loading progress:', error);
+//       if (saved) setCompletedSteps(JSON.parse(saved));
+//     } catch (e) {
+//       console.error('Error loading progress:', e);
 //     }
 //   };
-
-//   // Add this after fetching routinesData
-//   console.log('Routines Data:', JSON.stringify(routinesData, null, 2));
 
 //   const saveProgress = async () => {
 //     try {
 //       await AsyncStorage.setItem('routineProgress', JSON.stringify(completedSteps));
-//     } catch (error) {
-//       console.error('Error saving progress:', error);
+//     } catch (e) {
+//       console.error('Error saving progress:', e);
 //     }
 //   };
 
-//   // Screen ready state
-//   const { isRendering, isContentReady, renderError } = useScreenReady({
-//     dependencies: [routinesData],
-//     delay: 100,
-//     initialReady: false,
-//   });
-
-//   // Filter steps for active tab and sort by phase or creation date
 //   const currentSteps: UIRoutineStep[] = useMemo(() => {
-//     if (!routinesData?.data) return [];
+//     if (!routinesData?.data || !Array.isArray(routinesData.data)) return [];
 
-//     console.log(
-//       'All steps:',
-//       routinesData.data.map((s) => ({ id: s.id, time: s.time, title: s.product_category }))
+//     const filtered = routinesData.data.filter(
+//       (step) => (step.time?.toLowerCase() || '') === activeRoutine.toLowerCase()
 //     );
 
-//     const filtered = routinesData.data.filter((step) => {
-//       // Make sure time comparison is case-insensitive and handles null/undefined
-//       const stepTime = step.time?.toLowerCase() || '';
-//       const active = activeRoutine.toLowerCase();
-//       const matches = stepTime === active;
-//       console.log(`Step time: "${stepTime}", Active: "${active}", Matches: ${matches}`);
-//       return matches;
-//     });
+//     const phaseOrder: Record<string, number> = {
+//       maintenance: 1,
+//       balance: 1,
+//       repair: 2,
+//       treatment: 3,
+//     };
 
-//     console.log(`Filtered ${filtered.length} steps for ${activeRoutine}`);
-
-//     const phaseOrder = { maintenance: 1, repair: 2, treatment: 3 };
-//     const sorted = [...filtered].sort((a, b) => {
-//       const orderA = phaseOrder[a.phase as keyof typeof phaseOrder] || 99;
-//       const orderB = phaseOrder[b.phase as keyof typeof phaseOrder] || 99;
-//       if (orderA !== orderB) return orderA - orderB;
-
-//       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-//       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-//       return dateA - dateB;
-//     });
-
-//     return sorted.map((step, index) => mapStepToUI(step, index));
+//     return [...filtered]
+//       .sort((a, b) => {
+//         const orderA = phaseOrder[a.phase] ?? 99;
+//         const orderB = phaseOrder[b.phase] ?? 99;
+//         if (orderA !== orderB) return orderA - orderB;
+//         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+//         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+//         return dateA - dateB;
+//       })
+//       .map((step, index) => mapStepToUI(step, index));
 //   }, [routinesData, activeRoutine]);
 
-//   // Add this debug log right after the memo
-//   useEffect(() => {
-//     console.log('Current steps for', activeRoutine, ':', currentSteps.length);
-//     console.log('Step details:', currentSteps);
-//   }, [currentSteps, activeRoutine]);
-
-//   // Progress calculation
-//   const completedCount = currentSteps.filter((step) => completedSteps[step.id] === true).length;
+//   const completedCount = currentSteps.filter((s) => completedSteps[s.id] === true).length;
 //   const progress = currentSteps.length > 0 ? (completedCount / currentSteps.length) * 100 : 0;
 
-//   const handleToggleStep = async (stepId: string, isCompleted: boolean) => {
+//   const handleToggleStep = (stepId: string, isCompleted: boolean) => {
 //     setCompletedSteps((prev) => ({ ...prev, [stepId]: isCompleted }));
 //   };
 
@@ -151,12 +113,10 @@
 //       showSuccess('Step removed from your routine');
 //       refetch();
 //     } catch (err) {
-//       const errorMessage = getErrorMessage(err);
-//       showError(errorMessage);
+//       showError(getErrorMessage(err));
 //     }
 //   };
 
-//   // app/(main)/routines/index.tsx - Update handleAddCustomStep
 //   const handleAddCustomStep = useCallback(
 //     async (data: {
 //       productName: string;
@@ -164,21 +124,18 @@
 //       routineType: string;
 //       routineStepId: string;
 //     }) => {
-//       console.log('Received from bottom sheet:', data);
-
-//       try {
-//         // The step is already saved on the backend by the manual routine endpoint
-//         // Just refetch to show the new step
-//         showSuccess(`"${data.productName}" added to your ${data.routineType} routine`);
-//         await refetch();
-//         setBottomSheetVisible(false);
-//       } catch (err) {
-//         console.error('Error refetching routines:', err);
-//         showError('Failed to refresh routine list');
-//       }
+//       showSuccess(`"${data.productName}" added to your ${data.routineType} routine`);
+//       setBottomSheetVisible(false);
+//       await refetch();
 //     },
 //     [refetch, showSuccess]
 //   );
+
+//   const handleRefresh = async () => {
+//     setIsRefreshing(true);
+//     await refetch();
+//     setIsRefreshing(false);
+//   };
 
 //   const tabs = [
 //     { id: 'morning' as const, label: 'Morning', icon: <SunIcon size={16} color="#8F8377" /> },
@@ -186,8 +143,8 @@
 //     { id: 'weekly' as const, label: 'Weekly', icon: <RoutineIcon size={16} color="#8F8377" /> },
 //   ];
 
-//   // Loading states
-//   if (isLoading) {
+//   // ── 1. API loading (first mount, no cached data yet) ──────────────────────
+//   if (isLoading && !routinesData) {
 //     return (
 //       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
 //         <LoadingScreen loadingText="Loading your routine..." />
@@ -195,7 +152,8 @@
 //     );
 //   }
 
-//   if (isError) {
+//   // ── 2. Hard error with no data at all ─────────────────────────────────────
+//   if (isError && !routinesData) {
 //     return (
 //       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
 //         <CustomHeader
@@ -209,28 +167,7 @@
 //     );
 //   }
 
-//   if (isRendering) {
-//     return (
-//       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
-//         <LoadingScreen loadingText="Preparing your routine..." />
-//       </SafeAreaView>
-//     );
-//   }
-
-//   if (renderError) {
-//     return (
-//       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
-//         <CustomHeader
-//           title="Your Routine"
-//           subtitle="Personalized based on your latest scan."
-//           height={80}
-//           backButton
-//         />
-//         <ErrorScreen message={renderError} onRetry={refetch} />
-//       </SafeAreaView>
-//     );
-//   }
-
+//   // ── 3. Happy path ─────────────────────────────────────────────────────────
 //   return (
 //     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
 //       <CustomHeader
@@ -254,33 +191,24 @@
 //           paddingTop: 10,
 //           flexGrow: 1,
 //         }}
-//         className="flex-1">
-//         <View
-//           className="px-container"
-//           style={{
-//             opacity: isContentReady ? 1 : 0,
-//             transform: [{ translateY: isContentReady ? 0 : 10 }],
-//           }}>
+//         className="flex-1"
+//         refreshControl={
+//           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#977857" />
+//         }>
+//         <View className="px-container">
+//           {/* Tab bar */}
 //           <BorderlessShadowCard
-//             style={{
-//               paddingVertical: 12,
-//               paddingHorizontal: 24,
-//               alignItems: 'center',
-//             }}>
+//             style={{ paddingVertical: 12, paddingHorizontal: 24, alignItems: 'center' }}>
 //             <RoutineTabBar tabs={tabs} activeTab={activeRoutine} onTabPress={setActiveRoutine} />
 //           </BorderlessShadowCard>
 
+//           {/* Progress */}
 //           <View className="mt-3">
 //             <View className="flex-row items-center justify-between">
 //               <Text
 //                 className="flex-1 text-start font-outfitMedium text-[16px]"
 //                 style={{ color: '#361A0D' }}>
-//                 {activeRoutine === 'morning'
-//                   ? 'Morning'
-//                   : activeRoutine === 'night'
-//                     ? 'Night'
-//                     : 'Weekly'}{' '}
-//                 Progress
+//                 {activeRoutine.charAt(0).toUpperCase() + activeRoutine.slice(1)} Progress
 //               </Text>
 //               <Text className="font-outfit text-[14px]" style={{ color: '#2E211799' }}>
 //                 {completedCount} of {currentSteps.length} steps
@@ -295,36 +223,32 @@
 //               gradientLocations={[0.25, 0.6036, 0.9571]}
 //             />
 
-//             {currentSteps.map((step, index) => {
-//               const isStepCompleted = completedSteps[step.id] === true;
+//             {/* Steps */}
+//             {currentSteps.map((step, index) => (
+//               <RoutineStepCard
+//                 key={step.id}
+//                 style={{ marginTop: index === 0 ? 16 : 12 }}
+//                 stepNumber={step.stepNumber}
+//                 title={step.title}
+//                 description={step.description}
+//                 isCompleted={completedSteps[step.id] === true}
+//                 onToggle={(isCompleted) => handleToggleStep(step.id, isCompleted)}
+//                 isFirst={index === 0}
+//                 isLast={index === currentSteps.length - 1}
+//                 routineType={activeRoutine}
+//                 stepId={step.id}
+//                 onDelete={handleDeleteStep}
+//                 productCategory={step.productCategory}
+//               />
+//             ))}
 
-//               return (
-//                 <RoutineStepCard
-//                   style={{ marginTop: index === 0 ? 16 : 12 }}
-//                   key={step.id}
-//                   stepNumber={step.stepNumber}
-//                   title={step.title}
-//                   description={step.description}
-//                   isCompleted={isStepCompleted}
-//                   onToggle={(isCompleted) => handleToggleStep(step.id, isCompleted)}
-//                   isFirst={index === 0}
-//                   isLast={index === currentSteps.length - 1}
-//                   // isCustom={step.isCustom}
-//                   routineType={activeRoutine}
-//                   stepId={step.id}
-//                   onDelete={handleDeleteStep}
-//                   productCategory={step.productCategory}
-//                 />
-//               );
-//             })}
-
-//             {currentSteps.length === 0 && (
+//             {/* Empty state */}
+//             {currentSteps.length === 0 && !isLoading && (
 //               <View className="mt-8 items-center justify-center py-12">
 //                 <Text
 //                   className="text-center font-outfit text-[14px]"
 //                   style={{ color: '#2E211799' }}>
-//                   No steps in your {activeRoutine} routine yet.
-//                   {'\n'}Tap the + button to add one.
+//                   No steps in your {activeRoutine} routine yet.{'\n'}Tap + to add one.
 //                 </Text>
 //               </View>
 //             )}
@@ -346,10 +270,9 @@
 // export default Routines;
 
 // app/(main)/routines/index.tsx
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View, RefreshControl } from 'react-native';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
 import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
@@ -360,41 +283,37 @@ import { RoutineStepCard } from '@/components/routines/RoutineStepCard';
 import { RoutineTabBar } from '@/components/routines/RoutineTabButton';
 import { AddRoutineBottomSheet } from '@/components/routines/AddRoutineBottomSheet';
 import { useToast } from '@/hooks/useToast';
-import { useScreenReady } from '@/hooks/useScreenReady';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
-import { useGetAllRoutinesQuery, useDeleteRoutineStepMutation } from '@/store/api/routineApi';
+import {
+  useGetAllRoutinesQuery,
+  useDeleteRoutineStepMutation,
+  usePatchRoutineStepMutation,
+} from '@/store/api/routineApi';
 import { mapStepToUI, UIRoutineStep } from '@/utils/routineMapper';
-import { RefreshControl } from 'react-native-gesture-handler';
 
 type RoutineType = 'morning' | 'night' | 'weekly';
 
-// Helper function to extract error message
 const getErrorMessage = (error: any): string => {
   if (!error) return 'An error occurred';
-
   if ('data' in error && error.data && typeof error.data === 'object' && 'message' in error.data) {
     return error.data.message as string;
   }
-
-  if ('message' in error && typeof error.message === 'string') {
-    return error.message;
-  }
-
-  if (typeof error === 'string') {
-    return error;
-  }
-
+  if ('message' in error && typeof error.message === 'string') return error.message;
+  if (typeof error === 'string') return error;
   return 'Could not load routines. Pull down to refresh.';
 };
 
 const Routines = () => {
   const [activeRoutine, setActiveRoutine] = useState<RoutineType>('morning');
+  // Tracks optimistic completion state: stepId → boolean
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
+  // Tracks which steps are mid-flight to prevent double-taps
+  const [pendingSteps, setPendingSteps] = useState<Set<string>>(new Set());
   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { showSuccess, showError } = useToast();
 
-  // Fetch routines from API
   const {
     data: routinesData,
     isLoading,
@@ -403,77 +322,90 @@ const Routines = () => {
     refetch,
   } = useGetAllRoutinesQuery(undefined, {
     refetchOnMountOrArgChange: true,
-    pollingInterval: 0,
   });
 
   const [deleteStep] = useDeleteRoutineStepMutation();
+  const [patchStep] = usePatchRoutineStepMutation();
 
-  // Load/save completed state from AsyncStorage (UI-only state)
+  // ── Seed completedSteps from API response ────────────────────────────────────
+  // Only seeds on first load (when completedSteps is empty) to avoid clobbering
+  // optimistic updates that happen before a refetch returns.
   useEffect(() => {
-    loadProgress();
-  }, []);
+    if (!routinesData?.data) return;
+    setCompletedSteps((prev) => {
+      const next = { ...prev };
+      routinesData.data.forEach((step) => {
+        // Only set from API if we don't already have a local opinion
+        if (!(step.id in next)) {
+          next[step.id] = step.is_completed ?? false;
+        }
+      });
+      return next;
+    });
+  }, [routinesData]);
 
-  useEffect(() => {
-    saveProgress();
-  }, [completedSteps]);
-
-  const loadProgress = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('routineProgress');
-      if (saved) {
-        setCompletedSteps(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error('Error loading progress:', error);
-    }
-  };
-
-  const saveProgress = async () => {
-    try {
-      await AsyncStorage.setItem('routineProgress', JSON.stringify(completedSteps));
-    } catch (error) {
-      console.error('Error saving progress:', error);
-    }
-  };
-
-  // Screen ready state
-  const { isRendering, isContentReady, renderError } = useScreenReady({
-    dependencies: [routinesData],
-    delay: 100,
-    initialReady: false,
-  });
-
-  // Filter steps for active tab and sort by phase or creation date
   const currentSteps: UIRoutineStep[] = useMemo(() => {
     if (!routinesData?.data || !Array.isArray(routinesData.data)) return [];
 
-    const filtered = routinesData.data.filter((step) => {
-      const stepTime = step.time?.toLowerCase() || '';
-      const active = activeRoutine.toLowerCase();
-      return stepTime === active;
-    });
+    const filtered = routinesData.data.filter(
+      (step) => (step.time?.toLowerCase() || '') === activeRoutine.toLowerCase()
+    );
 
-    const phaseOrder = { maintenance: 1, repair: 2, treatment: 3, balance: 1 };
-    const sorted = [...filtered].sort((a, b) => {
-      const orderA = phaseOrder[a.phase as keyof typeof phaseOrder] || 99;
-      const orderB = phaseOrder[b.phase as keyof typeof phaseOrder] || 99;
-      if (orderA !== orderB) return orderA - orderB;
+    const phaseOrder: Record<string, number> = {
+      maintenance: 1,
+      balance: 1,
+      repair: 2,
+      treatment: 3,
+    };
 
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateA - dateB;
-    });
-
-    return sorted.map((step, index) => mapStepToUI(step, index));
+    return [...filtered]
+      .sort((a, b) => {
+        const orderA = phaseOrder[a.phase] ?? 99;
+        const orderB = phaseOrder[b.phase] ?? 99;
+        if (orderA !== orderB) return orderA - orderB;
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateA - dateB;
+      })
+      .map((step, index) => mapStepToUI(step, index));
   }, [routinesData, activeRoutine]);
 
-  // Progress calculation
-  const completedCount = currentSteps.filter((step) => completedSteps[step.id] === true).length;
+  const completedCount = currentSteps.filter((s) => completedSteps[s.id] === true).length;
   const progress = currentSteps.length > 0 ? (completedCount / currentSteps.length) * 100 : 0;
 
-  const handleToggleStep = async (stepId: string, isCompleted: boolean) => {
-    setCompletedSteps((prev) => ({ ...prev, [stepId]: isCompleted }));
-  };
+  // ── Toggle completion — optimistic update + API sync ─────────────────────────
+  const handleToggleStep = useCallback(
+    async (stepId: string, isCompleted: boolean) => {
+      // Prevent concurrent requests for the same step
+      if (pendingSteps.has(stepId)) return;
+
+      // 1. Optimistic update
+      setCompletedSteps((prev) => ({ ...prev, [stepId]: isCompleted }));
+      setPendingSteps((prev) => new Set(prev).add(stepId));
+
+      try {
+        await patchStep({ step_id: stepId, is_completed: isCompleted }).unwrap();
+        // Success — optimistic state is already correct, nothing more to do
+      } catch (err: any) {
+        // 2. Rollback on failure
+        setCompletedSteps((prev) => ({ ...prev, [stepId]: !isCompleted }));
+
+        const detail = err?.data?.detail;
+        if (typeof detail === 'string') {
+          showError(detail);
+        } else {
+          showError(getErrorMessage(err));
+        }
+      } finally {
+        setPendingSteps((prev) => {
+          const next = new Set(prev);
+          next.delete(stepId);
+          return next;
+        });
+      }
+    },
+    [pendingSteps, patchStep, showError]
+  );
 
   const handleDeleteStep = async (stepId: string) => {
     try {
@@ -481,8 +413,7 @@ const Routines = () => {
       showSuccess('Step removed from your routine');
       refetch();
     } catch (err) {
-      const errorMessage = getErrorMessage(err);
-      showError(errorMessage);
+      showError(getErrorMessage(err));
     }
   };
 
@@ -493,13 +424,20 @@ const Routines = () => {
       routineType: string;
       routineStepId: string;
     }) => {
-      console.log('Received from bottom sheet:', data);
       showSuccess(`"${data.productName}" added to your ${data.routineType} routine`);
-      await refetch();
       setBottomSheetVisible(false);
+      await refetch();
     },
     [refetch, showSuccess]
   );
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // After a manual refresh, let the API response reseed completion state fully
+    setCompletedSteps({});
+    await refetch();
+    setIsRefreshing(false);
+  };
 
   const tabs = [
     { id: 'morning' as const, label: 'Morning', icon: <SunIcon size={16} color="#8F8377" /> },
@@ -507,7 +445,7 @@ const Routines = () => {
     { id: 'weekly' as const, label: 'Weekly', icon: <RoutineIcon size={16} color="#8F8377" /> },
   ];
 
-  // Loading states - show loading screen while fetching
+  // ── 1. API loading (first mount, no cached data yet) ──────────────────────
   if (isLoading && !routinesData) {
     return (
       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
@@ -516,8 +454,8 @@ const Routines = () => {
     );
   }
 
-  // Error states - only show error if we have no data and there's an error
-  if (isError && !routinesData?.data) {
+  // ── 2. Hard error with no data at all ─────────────────────────────────────
+  if (isError && !routinesData) {
     return (
       <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
         <CustomHeader
@@ -531,28 +469,7 @@ const Routines = () => {
     );
   }
 
-  if (isRendering) {
-    return (
-      <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
-        <LoadingScreen loadingText="Preparing your routine..." />
-      </SafeAreaView>
-    );
-  }
-
-  if (renderError) {
-    return (
-      <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-backgroundColor">
-        <CustomHeader
-          title="Your Routine"
-          subtitle="Personalized based on your latest scan."
-          height={80}
-          backButton
-        />
-        <ErrorScreen message={renderError} onRetry={refetch} />
-      </SafeAreaView>
-    );
-  }
-
+  // ── 3. Happy path ─────────────────────────────────────────────────────────
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader
@@ -577,33 +494,23 @@ const Routines = () => {
           flexGrow: 1,
         }}
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}>
-        <View
-          className="px-container"
-          style={{
-            opacity: isContentReady ? 1 : 0,
-            transform: [{ translateY: isContentReady ? 0 : 10 }],
-          }}>
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#977857" />
+        }>
+        <View className="px-container">
+          {/* Tab bar */}
           <BorderlessShadowCard
-            style={{
-              paddingVertical: 12,
-              paddingHorizontal: 24,
-              alignItems: 'center',
-            }}>
+            style={{ paddingVertical: 12, paddingHorizontal: 24, alignItems: 'center' }}>
             <RoutineTabBar tabs={tabs} activeTab={activeRoutine} onTabPress={setActiveRoutine} />
           </BorderlessShadowCard>
 
+          {/* Progress */}
           <View className="mt-3">
             <View className="flex-row items-center justify-between">
               <Text
                 className="flex-1 text-start font-outfitMedium text-[16px]"
                 style={{ color: '#361A0D' }}>
-                {activeRoutine === 'morning'
-                  ? 'Morning'
-                  : activeRoutine === 'night'
-                    ? 'Night'
-                    : 'Weekly'}{' '}
-                Progress
+                {activeRoutine.charAt(0).toUpperCase() + activeRoutine.slice(1)} Progress
               </Text>
               <Text className="font-outfit text-[14px]" style={{ color: '#2E211799' }}>
                 {completedCount} of {currentSteps.length} steps
@@ -618,35 +525,34 @@ const Routines = () => {
               gradientLocations={[0.25, 0.6036, 0.9571]}
             />
 
-            {currentSteps.map((step, index) => {
-              const isStepCompleted = completedSteps[step.id] === true;
+            {/* Steps */}
+            {currentSteps.map((step, index) => (
+              <RoutineStepCard
+                key={step.id}
+                style={{ marginTop: index === 0 ? 16 : 12 }}
+                stepNumber={step.stepNumber}
+                title={step.title}
+                description={step.description}
+                isCompleted={completedSteps[step.id] === true}
+                onToggle={(isCompleted) => handleToggleStep(step.id, isCompleted)}
+                isFirst={index === 0}
+                isLast={index === currentSteps.length - 1}
+                routineType={activeRoutine}
+                stepId={step.id}
+                onDelete={handleDeleteStep}
+                productCategory={step.productCategory}
+                // Disable interaction while the PATCH is in-flight
+                disabled={pendingSteps.has(step.id)}
+              />
+            ))}
 
-              return (
-                <RoutineStepCard
-                  style={{ marginTop: index === 0 ? 16 : 12 }}
-                  key={step.id}
-                  stepNumber={step.stepNumber}
-                  title={step.title}
-                  description={step.description}
-                  isCompleted={isStepCompleted}
-                  onToggle={(isCompleted) => handleToggleStep(step.id, isCompleted)}
-                  isFirst={index === 0}
-                  isLast={index === currentSteps.length - 1}
-                  routineType={activeRoutine}
-                  stepId={step.id}
-                  onDelete={handleDeleteStep}
-                  productCategory={step.productCategory}
-                />
-              );
-            })}
-
-            {currentSteps.length === 0 && (
+            {/* Empty state */}
+            {currentSteps.length === 0 && !isLoading && (
               <View className="mt-8 items-center justify-center py-12">
                 <Text
                   className="text-center font-outfit text-[14px]"
                   style={{ color: '#2E211799' }}>
-                  No steps in your {activeRoutine} routine yet.
-                  {'\n'}Tap the + button to add one.
+                  No steps in your {activeRoutine} routine yet.{'\n'}Tap + to add one.
                 </Text>
               </View>
             )}
