@@ -4,7 +4,6 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Text,
   Dimensions,
   Animated,
@@ -18,6 +17,7 @@ import { saveFaceScanCaptures } from '@/utils/storage';
 import { PreScanInstructions } from '@/components/scans/PreScanInstructions';
 
 import { SunIcon, ManBottomLessIcon, SquareFrameIcon } from '@/components/icons';
+import { useToast } from '@/hooks/useToast';
 
 const { width, height } = Dimensions.get('window');
 
@@ -43,7 +43,7 @@ interface MultiAngleCameraScanProps {
   scanType: string;
   onComplete?: (captures: AngleCapture[]) => void;
   onAngleCaptured?: (angle: string, index: number, total: number) => void;
-  requiredAngles?: Array<'front' | 'left' | 'right' | 'up' | 'down'>;
+  requiredAngles?: ('front' | 'left' | 'right' | 'up' | 'down')[];
   autoCapture?: boolean;
 }
 
@@ -76,6 +76,8 @@ export const MultiAngleCameraScan: React.FC<MultiAngleCameraScanProps> = ({
   const [flashOpacity] = useState(new Animated.Value(0));
   const [isPreCountdown, setIsPreCountdown] = useState(false);
   const [preCountdownProgress, setPreCountdownProgress] = useState(0);
+
+  const { showError, showSuccess } = useToast();
 
   const cameraRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
@@ -190,7 +192,7 @@ export const MultiAngleCameraScan: React.FC<MultiAngleCameraScanProps> = ({
             params: { sessionId, scanType },
           });
         } else {
-          Alert.alert('Error', 'Failed to save captures. Please try again.');
+          showError('Failed to save captures. Please try again.');
         }
       };
       saveCaptures();
@@ -310,7 +312,9 @@ export const MultiAngleCameraScan: React.FC<MultiAngleCameraScanProps> = ({
       }
     } catch (error) {
       console.error('Error taking picture:', error);
-      Alert.alert('Error', 'Failed to capture image. Please try again.');
+      // Alert.alert('Error', 'Failed to capture image. Please try again.');
+      showError('Failed to capture image. Please try again.');
+
       setIsTakingPicture(false);
     }
   }, [

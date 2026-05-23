@@ -10,6 +10,7 @@ import {
 } from '@/store/slices/authSlice';
 import { SignInResponse } from '@/store/api/authApi';
 import { baseApi } from '@/store/api/baseApi';
+import { signOutFromGoogle } from '@/hooks/useGoogleAuth'; // ✅ added
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
@@ -67,7 +68,8 @@ export const useAuth = () => {
     );
 
     if (!data.user.onboarding_completed) {
-      router.replace('/(questionnaire)/life-phase');
+      // router.replace('/(questionnaire)/life-phase');
+      router.replace('/(questionnaire)/personal-info');
     } else {
       router.replace('/(main)');
     }
@@ -97,6 +99,9 @@ export const useAuth = () => {
     try {
       // ✅ Get refresh token before clearing storage
       const refreshToken = await AsyncStorage.getItem('refresh_token');
+
+      // ✅ Sign out from Google to clear cached account
+      await signOutFromGoogle();
 
       // ✅ Call signout API — fire and forget, don't block logout on failure
       if (refreshToken) {

@@ -1,100 +1,99 @@
 // hooks/useProgressData.ts
-import { useState, useMemo } from 'react';
-import { ScanType, ScoreData, BeforeAfterItem } from '@/types/progress';
+import { useMemo } from 'react';
 
-// Face Scan Data
-const faceWeeklyScores: ScoreData[] = [
-  { week: 'W1', score: 45, date: 'Jan 1' },
-  { week: 'W2', score: 52, date: 'Jan 8' },
-  { week: 'W3', score: 48, date: 'Jan 15' },
-  { week: 'W4', score: 58, date: 'Jan 22' },
-  { week: 'W5', score: 65, date: 'Jan 29' },
-  { week: 'W6', score: 72, date: 'Feb 5' },
-  { week: 'W7', score: 78, date: 'Feb 12' },
-  { week: 'W8', score: 82, date: 'Feb 19' },
-];
+import { ScanType, BeforeAfterItem } from '@/types/progress';
 
-const hairWeeklyScores: ScoreData[] = [
-  { week: 'W1', score: 38, date: 'Jan 1' },
-  { week: 'W2', score: 42, date: 'Jan 8' },
-  { week: 'W3', score: 45, date: 'Jan 15' },
-  { week: 'W4', score: 50, date: 'Jan 22' },
-  { week: 'W5', score: 55, date: 'Jan 29' },
-  { week: 'W6', score: 60, date: 'Feb 5' },
-  { week: 'W7', score: 65, date: 'Feb 12' },
-  { week: 'W8', score: 68, date: 'Feb 19' },
-];
+import {
+  useGetFaceAnalyticsQuery,
+  useGetFaceCompareQuery,
+  useGetFaceHistoryQuery,
+  useGetScalpAnalyticsQuery,
+  useGetScalpCompareQuery,
+  useGetScalpHistoryQuery,
+  CompareResponse,
+} from '@/store/api/progressApi';
 
-const faceBeforeAfterData: BeforeAfterItem[] = [
-  {
-    id: '1',
-    before: 'https://randomuser.me/api/portraits/women/68.jpg',
-    after: 'https://randomuser.me/api/portraits/women/44.jpg',
-    date: 'Week 1 → Week 8',
-    message: 'Noticeable reduction in redness and improved hydration.',
-  },
-  {
-    id: '2',
-    before: 'https://randomuser.me/api/portraits/women/32.jpg',
-    after: 'https://randomuser.me/api/portraits/women/55.jpg',
-    date: 'Week 2 → Week 6',
-    message: 'Significant improvement in skin texture and glow.',
-  },
-  {
-    id: '3',
-    before: 'https://randomuser.me/api/portraits/women/91.jpg',
-    after: 'https://randomuser.me/api/portraits/women/79.jpg',
-    date: 'Week 3 → Week 7',
-    message: 'Reduced pore size and better skin barrier function.',
-  },
-];
-
-const hairBeforeAfterData: BeforeAfterItem[] = [
-  {
-    id: '1',
-    before: 'https://randomuser.me/api/portraits/women/68.jpg',
-    after: 'https://randomuser.me/api/portraits/women/44.jpg',
-    date: 'Week 1 → Week 8',
-    message: 'Reduced dandruff and improved scalp health.',
-  },
-  {
-    id: '2',
-    before: 'https://randomuser.me/api/portraits/women/32.jpg',
-    after: 'https://randomuser.me/api/portraits/women/55.jpg',
-    date: 'Week 2 → Week 6',
-    message: 'Less oiliness and healthier hair follicles.',
-  },
-  {
-    id: '3',
-    before: 'https://randomuser.me/api/portraits/women/91.jpg',
-    after: 'https://randomuser.me/api/portraits/women/79.jpg',
-    date: 'Week 3 → Week 7',
-    message: 'Reduced scalp irritation and stronger hair.',
-  },
-];
+const mapCompareToBeforeAfter = (data: CompareResponse | undefined): BeforeAfterItem[] => {
+  if (!data) return [];
+  return [data.compare_1, data.compare_2, data.compare_3].filter(Boolean).map((item, index) => ({
+    id: String(index + 1),
+    before: item!.week_1_image_url,
+    after: item!.week_1_image_url,
+    date: `${item!.between[0]} → ${item!.between[1]}`,
+    message: item!.message,
+  }));
+};
 
 export const useProgressData = (scanType: ScanType) => {
-  const currentScores = scanType === 'face' ? faceWeeklyScores : hairWeeklyScores;
-  const currentBeforeAfter = scanType === 'face' ? faceBeforeAfterData : hairBeforeAfterData;
+  const isFace = scanType === 'face';
 
-  const improvement = useMemo(() => {
-    const firstScore = currentScores[0]?.score || 0;
-    const lastScore = currentScores[currentScores.length - 1]?.score || 0;
-    return ((lastScore - firstScore) / firstScore) * 100;
-  }, [currentScores]);
+  // Common query options to ensure fresh data
+  const queryOptions = {
+    refetchOnMountOrArgChange: true, // Refetch when component mounts
+    refetchOnFocus: true, // Refetch when app comes to foreground
+    refetchOnReconnect: true, // Refetch when network reconnects
+  };
+
+  const faceAnalytics = useGetFaceAnalyticsQuery(undefined, {
+    skip: !isFace,
+    ...queryOptions,
+  });
+
+  const scalpAnalytics = useGetScalpAnalyticsQuery(undefined, {
+    skip: isFace,
+    ...queryOptions,
+  });
+
+  const analyticsData = isFace ? faceAnalytics : scalpAnalytics;
+
+  const faceCompare = useGetFaceCompareQuery(undefined, {
+    skip: !isFace,
+    ...queryOptions,
+  });
+
+  const scalpCompare = useGetScalpCompareQuery(undefined, {
+    skip: isFace,
+    ...queryOptions,
+  });
+
+  const compareData = isFace ? faceCompare : scalpCompare;
+
+  const faceHistory = useGetFaceHistoryQuery(undefined, {
+    skip: !isFace,
+    ...queryOptions,
+  });
+
+  const scalpHistory = useGetScalpHistoryQuery(undefined, {
+    skip: isFace,
+    ...queryOptions,
+  });
+
+  const historyData = isFace ? faceHistory : scalpHistory;
 
   const chartData = useMemo(() => {
-    return currentScores.map((item) => ({
+    return (analyticsData.data?.weekly_scores ?? []).map((item) => ({
       value: item.score,
       label: item.week,
-      dataPointText: item.score.toString(),
+      dataPointText: String(item.score),
     }));
-  }, [currentScores]);
+  }, [analyticsData.data]);
+
+  const beforeAfterData = useMemo(
+    () => mapCompareToBeforeAfter(compareData.data),
+    [compareData.data]
+  );
 
   return {
-    scores: currentScores,
-    beforeAfterData: currentBeforeAfter,
+    isLoading: analyticsData.isLoading || compareData.isLoading || historyData.isLoading,
+    isError: analyticsData.isError || compareData.isError || historyData.isError,
+    refetch: () => {
+      analyticsData.refetch();
+      compareData.refetch();
+      historyData.refetch();
+    },
     chartData,
-    improvement,
+    improvement: analyticsData.data?.improvement_percentage ?? 0,
+    beforeAfterData,
+    recentScans: historyData.data?.scans ?? [],
   };
 };

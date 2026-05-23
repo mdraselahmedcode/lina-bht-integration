@@ -1,12 +1,9 @@
-
-
 // components/scans/BaseProductCameraScan.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Text,
   Dimensions,
   Vibration,
@@ -19,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../buttons/PrimaryButton';
 import { PreScanInstructions } from '@/components/scans/PreScanInstructions';
 import { BarCodeScanningIcon, CameraIcon, SquareFrameIcon, SunIcon } from '../icons';
+import { useToast } from '@/hooks/useToast';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,6 +48,9 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
   const [scanMode, setScanMode] = useState<ScanMode>('barcode');
   const [cameraFacing, setCameraFacing] = useState<CameraType>('back');
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+
+  const { showError, showSuccess } = useToast();
+
   // Shown briefly after a barcode is detected to inform the user the endpoint is pending
   const [barcodeToastVisible, setBarcodeToastVisible] = useState(false);
   const barcodeToastOpacity = useRef(new Animated.Value(0)).current;
@@ -162,7 +163,7 @@ export const BaseProductCameraScan: React.FC<BaseProductCameraScanProps> = ({
         }
       } catch (error) {
         console.error('Error taking picture:', error);
-        Alert.alert('Error', 'Failed to capture image. Please try again.');
+        showError('Failed to capture image. Please try again.');
       } finally {
         setIsTakingPicture(false);
       }

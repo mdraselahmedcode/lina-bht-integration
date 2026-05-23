@@ -45,9 +45,15 @@ export default function HomeScreen() {
   const currentUser = useSelector(selectCurrentUser);
   const userName = currentUser?.full_name?.split(' ')[0] ?? 'there';
 
-  const { data: homeData, isLoading, isError, refetch } = useGetHomeScansQuery();
+  const {
+    data: homeData,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetHomeScansQuery(undefined, {
+    refetchOnMountOrArgChange: true, // Refetch when component mounts
+  });
 
-  // Get quick actions and other handlers from useHomeScreen
   const {
     notificationCount,
     toggleStepCompletion,
@@ -68,6 +74,24 @@ export default function HomeScreen() {
     () => (hairScan ? checkedAreaToStats(hairScan.analysis.checked_area) : []),
     [hairScan]
   );
+
+  const hasFaceScan = !!faceScan;
+  const hasHairScan = !!hairScan;
+
+  // Determine which tabs to show and which is active
+  const availableTabs = useMemo(() => {
+    const tabs: ScanTab[] = [];
+    if (hasFaceScan) tabs.push('face');
+    if (hasHairScan) tabs.push('hair');
+    return tabs;
+  }, [hasFaceScan, hasHairScan]);
+
+  // Set default active tab to the first available scan
+  useMemo(() => {
+    if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0]);
+    }
+  }, [availableTabs, activeTab]);
 
   const activeScore =
     activeTab === 'face'
@@ -150,8 +174,6 @@ export default function HomeScreen() {
     );
   }
 
-  const hasBothScans = !!faceScan && !!hairScan;
-
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <HomeHeader
@@ -173,17 +195,17 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#977857" />
         }>
-        {/* Face/Hair Scan Toggle */}
-        {hasBothScans && (
+        {/* Scan Toggle - Only show if at least one scan exists */}
+        {availableTabs.length > 0 && (
           <View
             className="mb-3 flex-row self-center"
             style={{
               backgroundColor: '#EDE8E1',
               borderRadius: 20,
               padding: 3,
-              width: '100%', // Add full width
+              width: '100%',
             }}>
-            {(['face', 'hair'] as ScanTab[]).map((tab) => {
+            {availableTabs.map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <TouchableOpacity
@@ -191,12 +213,12 @@ export default function HomeScreen() {
                   onPress={() => handleTabSwitch(tab)}
                   activeOpacity={0.8}
                   style={{
-                    flex: 1, // Make each button take equal space
+                    flex: 1,
                     paddingHorizontal: 20,
                     paddingVertical: 7,
                     borderRadius: 18,
                     backgroundColor: isActive ? '#361A0D' : 'transparent',
-                    alignItems: 'center', // Center text horizontally
+                    alignItems: 'center',
                   }}>
                   <Text
                     style={{

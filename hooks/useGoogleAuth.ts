@@ -9,16 +9,14 @@ import { useGoogleSignInMutation } from '@/store/api/authApi';
 import { useCallback } from 'react';
 import { extractApiError } from '@/utils/apiError';
 
-// ─── Call this once at app startup in _layout.tsx ────────────────────────────
 export function configureGoogleSignIn() {
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
-  console.log('[Google] configureGoogleSignIn webClientId:', webClientId); // 👈 add this
+  console.log('[Google] configureGoogleSignIn webClientId:', webClientId);
   GoogleSignin.configure({
     webClientId,
   });
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useGoogleAuth() {
   const { persistAndLogin } = useAuth();
   const { showError } = useToast();
@@ -26,12 +24,14 @@ export function useGoogleAuth() {
 
   const signInWithGoogle = useCallback(async () => {
     try {
-      // 1. Check Play Services (Android only, no-op on iOS)
       console.log('[Google] Checking Play Services...');
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       console.log('[Google] Play Services OK');
 
-      // 2. Trigger native Google sign-in sheet
+      // ✅ Always sign out first so the account picker is always shown
+      // This lets users switch accounts and prevents silent re-auth
+      await GoogleSignin.signOut();
+
       console.log('[Google] Starting sign-in...');
       const userInfo = await GoogleSignin.signIn();
       console.log('[Google] Sign-in result:', JSON.stringify(userInfo, null, 2));
@@ -44,12 +44,10 @@ export function useGoogleAuth() {
         return;
       }
 
-      // 3. Send id_token directly to your backend — no Firebase needed
       console.log('[Google] Calling backend /auth/google...');
       const data = await googleSignIn({ id_token: idToken }).unwrap();
       console.log('[Google] Backend OK:', JSON.stringify(data, null, 2));
 
-      // 4. Persist session
       await persistAndLogin(data);
       console.log('[Google] Done!');
     } catch (error: any) {
@@ -60,9 +58,9 @@ export function useGoogleAuth() {
       if (isErrorWithCode(error)) {
         switch (error.code) {
           case statusCodes.SIGN_IN_CANCELLED:
-            return; // user dismissed — no toast
+            return;
           case statusCodes.IN_PROGRESS:
-            return; // already in progress — no toast
+            return;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
             showError('Google Play Services are not available on this device.');
             return;
@@ -76,4 +74,17 @@ export function useGoogleAuth() {
   }, [googleSignIn, persistAndLogin, showError]);
 
   return { signInWithGoogle, isLoading };
+}
+
+// ✅ Call this from useAuth logout() to fully clear Google session
+export async function signOutFromGoogle() {
+  try {
+    const isSignedIn = await GoogleSignin.getCurrentUser();
+    if (isSignedIn) {
+      await GoogleSignin.signOut();
+      console.log('[Google] Signed out from Google');
+    }
+  } catch {
+    // Silent fail — local logout should still proceed
+  }
 }

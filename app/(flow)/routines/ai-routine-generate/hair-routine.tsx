@@ -403,7 +403,6 @@ const HairRoutineScreen = () => {
                 borderWidth: 1,
                 borderColor: '#FFFFFF99',
                 borderRadius: 24,
-                borderTopWidth: 2,
                 borderBottomWidth: 2,
               }}>
               <Text

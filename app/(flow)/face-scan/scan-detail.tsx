@@ -1,11 +1,9 @@
-// app/(flow)/face-scan/analysis-complete.tsx
-import { ImageSourcePropType, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import { ImageSourcePropType, ScrollView, Text, View } from 'react-native';
+import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import CustomHeader from '@/components/header/CustomHeader';
 import { LAYOUT } from '@/constants/constants';
-import PrimaryButton from '@/components/buttons/PrimaryButton';
 import { useScreenReady } from '@/hooks/useScreenReady';
 import AnalysingResultScoreCard from '@/components/scans/AnalysingResultScoreCard';
 import { DetectedConditionsList } from '@/components/scans/DetectedConditionsList';
@@ -20,12 +18,9 @@ import {
 } from '@/components/scans/FoodRecommendationSection';
 import { KeyNutrientsSection, Nutrient } from '@/components/scans/KeyNutrientsSection';
 import { HydrationTargetCard } from '@/components/scans/HydrationTargetCard';
-import { RecommendedArticles } from '@/components/scans/RecommendedArticles';
-import { SAMPLE_ARTICLES } from '@/constants/sampleArticles';
 import LoadingScreen from '@/components/loading/LoadingScreen';
 import ErrorScreen from '@/components/errors/ErrorScreen';
-import { FaceScanResponse } from '@/store/api/scanApi';
-import { AngleCapture } from '@/components/scans/MultiAngleCameraScan';
+import { useGetFaceScanByIdQuery } from '@/store/api/progressApi';
 
 // ── Severity helpers ──────────────────────────────────────────────────────────
 const normaliseSeverity = (raw: string): 'Low' | 'Medium' | 'High' => {
@@ -64,7 +59,6 @@ const severityProgress = (severity: string): number => {
   }
 };
 
-// ── Stat colour map ───────────────────────────────────────────────────────────
 const STAT_COLORS: Record<string, string> = {
   pigmentation: '#FB7185',
   dullness: '#A78BFA',
@@ -77,60 +71,27 @@ const STAT_COLORS: Record<string, string> = {
   evenness: '#A78BFA',
 };
 
-// ── Fallback face image ───────────────────────────────────────────────────────
-const FALLBACK_FACE_IMAGE = require('@/assets/images/hair_scalp_analysis_sample_image.jpg');
+const FALLBACK_IMAGE = require('@/assets/images/hair_scalp_analysis_sample_image.jpg');
 
 // ── Component ─────────────────────────────────────────────────────────────────
-const FaceAnalysisCompleteScreen = () => {
+const FaceScanDetailScreen = () => {
   const router = useRouter();
-  const { scanResult, capturesJson, id, fromHistory } = useLocalSearchParams<{
-    scanResult?: string;
-    capturesJson?: string;
-    id?: string;
-    fromHistory?: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [data, setData] = useState<FaceScanResponse | null>(null);
-  const [captures, setCaptures] = useState<AngleCapture[]>([]);
-  const [parseError, setParseError] = useState<string | null>(null);
+  const { data, isLoading, isError } = useGetFaceScanByIdQuery(id!, { skip: !id });
 
-  const isHistory = fromHistory === 'true';
-
-  const { isRendering, isContentReady, renderError } = useScreenReady({
+  const { isContentReady } = useScreenReady({
     dependencies: [data],
     delay: 100,
     initialReady: false,
   });
 
-  useEffect(() => {
-    if (!scanResult) {
-      setParseError('No scan result received.');
-      return;
-    }
-    try {
-      setData(JSON.parse(scanResult));
-    } catch {
-      setParseError('Could not read scan result.');
-    }
-  }, [scanResult]);
+  // ── Image: use first image from the scan's images array ───────────────────
+  const faceImageSource: ImageSourcePropType = data?.images?.[0]
+    ? { uri: data.images[0] }
+    : FALLBACK_IMAGE;
 
-  useEffect(() => {
-    if (capturesJson) {
-      try {
-        setCaptures(JSON.parse(capturesJson));
-      } catch {
-        // silently ignore — captures are optional for display
-      }
-    }
-  }, [capturesJson]);
-
-  // ── Derive face image source (use front capture if available) ─────────────
-  const frontCapture = captures.find((c) => c.angle === 'front');
-  const faceImageSource: ImageSourcePropType = frontCapture
-    ? { uri: frontCapture.uri }
-    : FALLBACK_FACE_IMAGE;
-
-  // ── Score card stats ───────────────────────────────────────────────────────
+  // ── Derived data ──────────────────────────────────────────────────────────
   const skinStats = data
     ? Object.entries(data.analysis.checked_area).map(([key, value]) => ({
         label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -139,7 +100,6 @@ const FaceAnalysisCompleteScreen = () => {
       }))
     : [];
 
-  // ── Detected conditions ────────────────────────────────────────────────────
   const detectedConditions: DetectedCondition[] = (data?.analysis.detected_condition ?? []).map(
     (c) => ({
       id: c.name,
@@ -152,7 +112,6 @@ const FaceAnalysisCompleteScreen = () => {
     })
   );
 
-  // ── Lifestyle factors ──────────────────────────────────────────────────────
   const lifestyleFactors: LifestyleFactor[] = data
     ? [
         {
@@ -176,7 +135,6 @@ const FaceAnalysisCompleteScreen = () => {
       ]
     : [];
 
-  // ── Prognostic timeline ────────────────────────────────────────────────────
   const prognosticDays: TimelineDay[] = data
     ? [
         {
@@ -219,18 +177,13 @@ const FaceAnalysisCompleteScreen = () => {
       ]
     : [];
 
-  // ── Nutrients ──────────────────────────────────────────────────────────────
-  const nutrients: Nutrient[] = (data?.nutritions ?? []).map((n) => {
-    console.log('[Nutrient] icon_url:', n.icon_url); // 👈 check in Metro logs
-    return {
-      id: n.id,
-      name: n.name,
-      description: n.benefit,
-      imageUrl: { uri: n.icon_url },
-    };
-  });
+  const nutrients: Nutrient[] = (data?.nutritions ?? []).map((n) => ({
+    id: n.id,
+    name: n.name,
+    description: n.benefit,
+    imageUrl: { uri: n.icon_url },
+  }));
 
-  // ── Foods ──────────────────────────────────────────────────────────────────
   const recommendedFoods: RecommendedFood[] = (data?.foods ?? []).map((f) => ({
     id: f.id,
     name: f.name,
@@ -238,7 +191,6 @@ const FaceAnalysisCompleteScreen = () => {
     imageUrl: f.icon_url,
   }));
 
-  // ── Recipes ────────────────────────────────────────────────────────────────
   const recommendedRecipes: RecommendedRecipe[] = (data?.recipes ?? []).map((r) => ({
     id: r.id,
     title: r.name,
@@ -247,58 +199,28 @@ const FaceAnalysisCompleteScreen = () => {
     tags: [r.meal_type.charAt(0).toUpperCase() + r.meal_type.slice(1), ...r.tags],
   }));
 
-  // ── Articles ───────────────────────────────────────────────────────────────
-  const recommendedArticles = SAMPLE_ARTICLES.filter(
-    (a) =>
-      a.title.toLowerCase().includes('skin') ||
-      a.category.toLowerCase().includes('skin') ||
-      a.title.toLowerCase().includes('face') ||
-      a.category.toLowerCase().includes('face')
-  )
-    .slice(0, 2)
-    .map((a) => ({
-      id: a.id,
-      title: a.title,
-      description: a.description,
-      readTime: a.readTime,
-      category: a.category,
-      imageUrl: { uri: a.imageUrl },
-    }));
-
-  // ── Guards ─────────────────────────────────────────────────────────────────
-  if (isRendering && !data) {
+  // ── Guards ────────────────────────────────────────────────────────────────
+  if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-        <LoadingScreen loadingText="Preparing your skin analysis..." />
+        <LoadingScreen loadingText="Loading scan details..." />
       </SafeAreaView>
     );
   }
 
-  if (renderError || parseError) {
+  if (isError || !data) {
     return (
       <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
         <CustomHeader title="Face Analysis" height={50} backButton />
-        <ErrorScreen
-          message={renderError ?? parseError ?? 'Unknown error'}
-          onRetry={() => router.back()}
-        />
+        <ErrorScreen message="Failed to load scan details." onRetry={() => router.back()} />
       </SafeAreaView>
     );
   }
 
-  if (!data) {
-    return (
-      <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
-        <LoadingScreen loadingText="Loading..." />
-      </SafeAreaView>
-    );
-  }
-
-  // ── Hydration target label ─────────────────────────────────────────────────
   const hydrationTargetMl = data.analysis.hydration_target ?? 2400;
   const hydrationTargetLabel = `${(hydrationTargetMl / 1000).toFixed(1)}L of Water`;
 
-  // ── Main render ────────────────────────────────────────────────────────────
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <SafeAreaView edges={['top', 'right']} className="flex-1 bg-backgroundColor">
       <CustomHeader title="Face & Skin Analysis" height={50} backButton />
@@ -328,7 +250,7 @@ const FaceAnalysisCompleteScreen = () => {
 
           {/* Skin Analysis Summary Cards */}
           <SkinAnalysisCards
-            imageUri={frontCapture?.uri}
+            imageUri={data.images?.[0]}
             hydrationLevel={data.analysis.hydration}
             rednessScore={data.analysis.checked_area['redness'] ?? data.analysis.visible_area.score}
             rednessProgress={data.analysis.visible_area.score}
@@ -397,50 +319,10 @@ const FaceAnalysisCompleteScreen = () => {
             description="Drinking enough water helps flush inflammatory markers and keeps your skin plump and clear."
             title="Hydration Target"
           />
-
-          {/* Articles */}
-          {/* {recommendedArticles.length > 0 && (
-            <RecommendedArticles
-              articles={recommendedArticles}
-              title="Recommended for You"
-              showIcon={true}
-              onArticlePress={(article) =>
-                router.push({
-                  pathname: '/(flow)/learn-article/[id]',
-                  params: { id: article.id },
-                })
-              }
-            />
-          )} */}
-
-          {/* CTA */}
-
-          {!isHistory && (
-            <PrimaryButton
-              title="Generate Your Routine"
-              onPress={() =>
-                router.push({
-                  pathname: '/(flow)/routines/ai-routine-generate/face-routine',
-                  params: { scan_id: data.scan_id },
-                })
-              }
-              style={{ marginTop: 32 }}
-            />
-          )}
-          {!isHistory && (
-            <TouchableOpacity
-              onPress={() => router.push('/(main)')}
-              activeOpacity={0.6}
-              className="mt-4 py-5">
-              <Text className="text-center font-outfitMedium text-[20px] text-[#361A0D]">
-                Skip for now
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default FaceAnalysisCompleteScreen;
+export default FaceScanDetailScreen;

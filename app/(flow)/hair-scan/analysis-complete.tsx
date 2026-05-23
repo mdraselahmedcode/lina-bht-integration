@@ -206,12 +206,15 @@ const HairAnalysisCompleteScreen = () => {
     : [];
 
   // ── Nutrients ─────────────────────────────────────────────────────────────
-  const nutrients: Nutrient[] = (data?.nutritions ?? []).map((n) => ({
-    id: n.id,
-    name: n.name,
-    description: n.benefit,
-    imageUrl: n.icon_url,
-  }));
+  const nutrients: Nutrient[] = (data?.nutritions ?? []).map((n) => {
+    console.log('[Nutrient] icon_url:', n.icon_url); // 👈 check in Metro logs
+    return {
+      id: n.id,
+      name: n.name,
+      description: n.benefit,
+      imageUrl: { uri: n.icon_url },
+    };
+  });
 
   // ── Foods ─────────────────────────────────────────────────────────────────
   const recommendedFoods: RecommendedFood[] = (data?.foods ?? []).map((f) => ({

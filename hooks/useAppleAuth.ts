@@ -1,62 +1,65 @@
-// import { useAppleSignInMutation } from '@/store/api/authApi';
-// import auth from '@react-native-firebase/auth';
-// import * as AppleAuthentication from 'expo-apple-authentication';
-// import * as Crypto from 'expo-crypto';
-// import { useAuth } from './useAuth';
-// import { useToast } from './useToast';
-// import { useCallback } from 'react';
-// import { extractApiError } from '@/utils/apiError';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useAuth } from './useAuth';
+import { useToast } from './useToast';
+import { useAppleSignInMutation } from '@/store/api/authApi';
+import { useCallback } from 'react';
+import { extractApiError } from '@/utils/apiError';
 
-// export function useAppleAuth() {
-//   const { persistAndLogin } = useAuth();
-//   const { showError } = useToast();
-//   const [appleSignIn, { isLoading }] = useAppleSignInMutation();
+export function useAppleAuth() {
+  const { persistAndLogin } = useAuth();
+  const { showError } = useToast();
+  const [appleSignIn, { isLoading }] = useAppleSignInMutation();
 
-//   const signInWithApple = useCallback(async () => {
-//     try {
-//       // Generate a nonce for security
-//       const rawNonce = Array.from(Crypto.getRandomBytes(32))
-//         .map((b) => b.toString(16).padStart(2, '0'))
-//         .join('');
-//       const hashedNonce = await Crypto.digestStringAsync(
-//         Crypto.CryptoDigestAlgorithm.SHA256,
-//         rawNonce
-//       );
+  const signInWithApple = useCallback(async () => {
+    try {
+      // 1. Trigger native Apple sign-in sheet
+      console.log('[Apple] Starting sign-in...');
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      console.log('[Apple] Credential received');
 
-//       const credential = await AppleAuthentication.signInAsync({
-//         requestedScopes: [
-//           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-//           AppleAuthentication.AppleAuthenticationScope.EMAIL,
-//         ],
-//         nonce: hashedNonce,
-//       });
+      const identityToken = credential.identityToken;
+      console.log(
+        '[Apple] Identity Token:',
+        identityToken ? `${identityToken.slice(0, 40)}...` : 'NULL'
+      );
 
-//       if (credential.authorizationCode === 'ERR_REQUEST_CANCELED') return;
+      if (!identityToken) {
+        showError('Apple sign-in did not return a token. Please try again.');
+        return;
+      }
 
-//       const { givenName, familyName } = credential.fullName ?? {};
-//       const fullName = [givenName, familyName].filter(Boolean).join(' ') || null;
+      // 2. Build full name — Apple only provides this on the VERY FIRST sign-in
+      const { givenName, familyName } = credential.fullName ?? {};
+      const fullName = [givenName, familyName].filter(Boolean).join(' ') || null;
+      console.log('[Apple] Full name:', fullName);
 
-//       // Sign into Firebase
-//       const appleCredential = auth.AppleAuthProvider.credential(
-//         credential.identityToken,
-//         rawNonce // pass the RAW nonce to Firebase
-//       );
-//       await auth().signInWithCredential(appleCredential);
+      // 3. Send identity_token directly to your backend
+      console.log('[Apple] Calling backend /auth/apple...');
+      const data = await appleSignIn({
+        identity_token: identityToken,
+        full_name: fullName,
+      }).unwrap();
+      console.log('[Apple] Backend OK:', JSON.stringify(data, null, 2));
 
-//       // Send identity_token to your backend
-//       const data = await appleSignIn({
-//         identity_token: credential.identityToken ?? '',
-//         full_name: fullName,
-//       }).unwrap();
+      // 4. Persist session
+      await persistAndLogin(data);
+      console.log('[Apple] Done!');
+    } catch (error: any) {
+      console.error('[Apple] ERROR:', JSON.stringify(error, null, 2));
+      console.error('[Apple] code:', error?.code);
+      console.error('[Apple] message:', error?.message);
 
-//       console.log('Apple Identity Token:', credential.identityToken);
+      // User dismissed the sheet — no toast
+      if (error?.code === 'ERR_REQUEST_CANCELED') return;
 
-//       await persistAndLogin(data);
-//     } catch (error: any) {
-//       if (error?.code === 'ERR_REQUEST_CANCELED') return;
-//       showError(extractApiError(error, 'Apple sign-in failed.'));
-//     }
-//   }, []);
+      showError(extractApiError(error, 'Apple sign-in failed. Please try again.'));
+    }
+  }, [appleSignIn, persistAndLogin, showError]);
 
-//   return { signInWithApple, isLoading };
-// }
+  return { signInWithApple, isLoading };
+}
