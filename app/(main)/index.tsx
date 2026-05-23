@@ -23,6 +23,7 @@ import { useHomeScreen } from '@/components/home/hooks/useHomeScreen';
 import { useGetHomeScansQuery } from '@/store/api/homeApi';
 import { selectCurrentUser } from '@/store/slices/authSlice';
 import { RoutineStep } from '@/types/home';
+import BorderlessShadowCard from '@/components/cards/BorderlessShadowCard';
 
 type ScanTab = 'face' | 'hair';
 
@@ -234,8 +235,8 @@ export default function HomeScreen() {
               averageScore={activeScore}
             />
           ) : (
-            <View
-              className="mb-3 items-center justify-center rounded-3xl py-10"
+            <BorderlessShadowCard
+              className="mb-[-6] items-center justify-center rounded-3xl py-6"
               style={{ backgroundColor: '#F5EFE8', borderWidth: 1, borderColor: '#E8DDD0' }}>
               <Text className="font-outfitMedium text-[15px]" style={{ color: '#977857' }}>
                 No {activeTab === 'face' ? 'face' : 'hair'} scan yet
@@ -243,7 +244,7 @@ export default function HomeScreen() {
               <Text className="mt-1 font-outfit text-[13px]" style={{ color: '#2E211780' }}>
                 Complete a scan to see your score
               </Text>
-            </View>
+            </BorderlessShadowCard>
           )}
         </View>
 
